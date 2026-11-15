@@ -2,6 +2,12 @@
 
 **A quiet space to create your own sound.**
 
+**[Open STUDIO — Live Website →](https://studio-music-yvette.yvettewu2017.chatgpt.site)**
+
+Publicly accessible in your browser. No login or installation required. Click **Play** to start audio.
+
+The live website currently runs the previously deployed STUDIO version. This repository contains the updated 1.1 source, which has not yet been deployed to that website.
+
 A working browser music studio for composing original R&B, neo-soul, electronic music, and beats. Built with React, strict TypeScript, Tone.js, and Web Audio. No account, paid samples, or AI credentials are needed.
 
 ![STUDIO in Gallery Light](docs/screenshots/studio-light.png)
