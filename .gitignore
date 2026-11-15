@@ -1,0 +1,10 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+*.local
+.DS_Store
+.env*
+!.env.example
+.openai/*.tar.gz
+*.tsbuildinfo

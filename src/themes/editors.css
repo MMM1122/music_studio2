@@ -1,0 +1,649 @@
+/* Editing surfaces share the application's semantic theme and track accent. */
+.piano-editor,
+.drum-editor {
+  --note-accent: var(--track-color, var(--color-selection));
+  width: 100%;
+  min-width: 0;
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  background: var(--color-surface-elevated);
+}
+.piano-editor button,
+.drum-editor button,
+.keyboard button {
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+.piano-editor button:disabled,
+.drum-editor button:disabled,
+.keyboard button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.piano-editor button:focus-visible,
+.drum-editor button:focus-visible,
+.keyboard button:focus-visible,
+.piano-editor select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.note-tools,
+.drum-toolbar {
+  height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+.editor-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.editor-tool-label {
+  font-size: 9px;
+  letter-spacing: 1.25px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.editor-tool-group button,
+.editor-tool-group select {
+  height: 25px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 10px;
+  border-radius: 3px;
+  padding: 0 6px;
+}
+.editor-tool-group select {
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  padding-right: 2px;
+  max-width: 76px;
+}
+.editor-tool-group button:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+.editor-tool-group .editor-icon {
+  width: 25px;
+  padding: 0;
+}
+.editor-tool-group + .editor-tool-group {
+  position: relative;
+}
+.editor-tool-group + .editor-tool-group:before {
+  content: "";
+  width: 1px;
+  height: 15px;
+  position: absolute;
+  left: -8px;
+  top: 5px;
+  background: var(--color-border);
+}
+.editor-zoom {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 86px;
+}
+.editor-small-separator {
+  height: 16px;
+  width: 1px;
+  background: var(--color-border);
+  margin: 0 6px;
+}
+.roll-scroll {
+  height: 248px;
+  min-height: 160px;
+  max-height: 52vh;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  overscroll-behavior: contain;
+}
+.roll-content {
+  position: relative;
+  min-height: 100%;
+}
+.roll-ruler {
+  height: 24px;
+  display: flex;
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 7;
+}
+.ruler-key-label {
+  position: sticky;
+  left: 0;
+  width: 54px;
+  flex-shrink: 0;
+  z-index: 9;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  color: var(--color-text-muted);
+}
+.roll-bar-labels {
+  height: 24px;
+  position: relative;
+}
+.roll-bar-labels > span {
+  position: absolute;
+  top: 0;
+  padding: 6px 0 0 9px;
+  height: 24px;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.roll-bar-labels small {
+  font-size: 8px;
+  color: var(--color-text-muted);
+}
+.roll-body {
+  position: relative;
+}
+.roll-keys {
+  position: sticky;
+  left: 0;
+  width: 54px;
+  z-index: 5;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+}
+.roll-keys button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 8px 0 0;
+  text-align: right;
+  font-size: 9px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-elevated);
+  border-radius: 0;
+}
+.roll-keys button.black-key {
+  background: var(--color-surface);
+  border-right: 8px solid var(--color-surface-elevated);
+  color: var(--color-text-muted);
+}
+.roll-keys button.octave-key {
+  border-bottom-color: var(--color-text-muted);
+}
+.roll-keys button:hover {
+  background: var(--note-accent);
+}
+.roll-grid {
+  position: absolute;
+  left: 54px;
+  top: 0;
+  touch-action: none;
+  cursor: crosshair;
+  background-color: var(--color-surface-elevated);
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-border) 65%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-border) 30%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    var(--bar-width) 100%,
+    var(--beat-width) 100%,
+    var(--snap-width) 100%;
+  user-select: none;
+}
+.roll-row {
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 35%, transparent);
+}
+.roll-row.out-scale {
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+}
+.roll-row.octave-row {
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 90%, transparent);
+}
+.midi-note {
+  position: absolute;
+  border: 1px solid
+    color-mix(in srgb, var(--note-accent) 82%, var(--color-text-primary));
+  border-radius: 2px;
+  background: var(--note-accent);
+  padding: 0;
+  z-index: 2;
+  cursor: grab;
+  overflow: visible;
+  touch-action: none;
+  box-shadow: none;
+  text-align: left;
+}
+.midi-note span:first-child {
+  font-size: 8px;
+  line-height: 12px;
+  position: absolute;
+  left: 5px;
+  top: 0;
+  pointer-events: none;
+  color: var(--color-note-text, var(--color-text-primary));
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: calc(100% - 8px);
+}
+.midi-note.is-selected {
+  outline: 1px solid var(--color-note-selected, var(--color-text-primary));
+  outline-offset: 1px;
+  z-index: 3;
+}
+.midi-note:active {
+  cursor: grabbing;
+}
+.midi-note .note-resize {
+  position: absolute;
+  right: -1px;
+  top: 0;
+  height: 100%;
+  width: 7px;
+  cursor: ew-resize;
+  z-index: 4;
+  border-radius: 0 2px 2px 0;
+}
+.midi-note .note-resize:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+}
+.note-selection-box {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  border: 1px solid var(--color-accent);
+}
+.editor-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  will-change: transform;
+  width: 1px;
+  background: var(--color-playhead);
+  z-index: 4;
+  pointer-events: none;
+  box-shadow: 1px 0 0
+    color-mix(in srgb, var(--color-background) 40%, transparent);
+}
+.note-footer {
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 5px 18px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+.velocity-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.velocity-control input {
+  width: 72px;
+  height: 13px;
+  accent-color: var(--color-accent);
+}
+.velocity-control .tabular {
+  width: 20px;
+  color: var(--color-text-secondary);
+}
+.note-footer .note-count {
+  padding-left: 15px;
+  border-left: 1px solid var(--color-border);
+}
+.editor-help {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.scale-label {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.piano-editor .tabular,
+.drum-editor .tabular {
+  font-variant-numeric: tabular-nums;
+}
+.drum-toolbar {
+  justify-content: space-between;
+}
+.drum-swing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drum-swing input {
+  width: 92px;
+  accent-color: var(--color-accent);
+}
+.drum-swing .tabular {
+  width: 28px;
+  color: var(--color-text-secondary);
+}
+.drum-grid-scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: 8px 18px 14px;
+  height: 248px;
+  box-sizing: border-box;
+}
+.drum-grid {
+  min-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drum-step-labels,
+.drum-row {
+  display: grid;
+  grid-template-columns: 140px repeat(16, minmax(16px, 1fr));
+  gap: 6px;
+  align-items: center;
+}
+.drum-step-labels {
+  height: 20px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+.drum-step-labels > span:first-child {
+  text-align: left;
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  padding-left: 6px;
+}
+.drum-step-labels > span.beat-start {
+  color: var(--color-text-secondary);
+}
+.drum-step-labels > span.current-step {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.drum-name {
+  height: 27px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  padding: 0 5px;
+  color: var(--color-text-secondary) !important;
+  border-radius: 3px;
+  font-size: 10px !important;
+}
+.drum-name:hover {
+  background: var(--color-surface-hover);
+}
+.drum-number {
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: var(--color-text-muted);
+}
+.drum-name svg {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+.drum-step {
+  height: 27px;
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+  border-radius: 3px;
+  padding: 0;
+  isolation: isolate;
+  overflow: hidden;
+  transition: border-color 0.12s ease;
+}
+.drum-step.beat-start {
+  border-left-color: var(--color-text-muted);
+  margin-left: 3px;
+}
+.drum-step-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--note-accent);
+  z-index: -1;
+}
+.drum-step.is-on {
+  border-color: color-mix(
+    in srgb,
+    var(--note-accent) 70%,
+    var(--color-text-primary)
+  );
+}
+.drum-step.is-selected {
+  outline: 1px solid var(--color-text-primary);
+  outline-offset: 1px;
+}
+.drum-step.is-playing:after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  bottom: 1px;
+  left: 3px;
+  right: 3px;
+  background: var(--color-text-primary);
+}
+.drum-step:hover {
+  border-color: var(--color-text-primary);
+}
+.drum-velocity-mark {
+  position: absolute;
+  bottom: 4px;
+  left: calc(50% - 1px);
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(
+    in srgb,
+    var(--color-note-text, var(--color-text-primary)) 35%,
+    transparent
+  );
+}
+.keyboard {
+  display: flex;
+  height: 91px;
+  min-height: 75px;
+  padding: 10px 18px 0;
+  gap: 18px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  outline: none;
+  --editor-key-white: #fff;
+  --editor-key-black: #34322f;
+  --editor-key-label: #77736e;
+  --editor-key-black-label: #b8b3ad;
+}
+[data-theme="dark"] .keyboard {
+  --editor-key-white: #bbb8b2;
+  --editor-key-black: #252525;
+  --editor-key-label: #55524e;
+  --editor-key-black-label: #aaa7a3;
+}
+.keyboard-octave {
+  width: 85px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding-top: 2px;
+}
+.keyboard-octave > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.keyboard-octave button {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+}
+.keyboard-octave small {
+  font-size: 8px;
+  color: var(--color-text-muted);
+}
+.keyboard-keys {
+  position: relative;
+  flex: 1;
+  max-width: 710px;
+  min-width: 300px;
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+}
+.virtual-white {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--editor-key-white);
+  border-radius: 0 0 2px 2px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  touch-action: manipulation;
+}
+.virtual-white span {
+  padding-bottom: 7px;
+  font-size: 8px;
+  color: var(--editor-key-label);
+}
+.virtual-black {
+  position: absolute;
+  top: 0;
+  height: 51px;
+  padding: 0;
+  z-index: 2;
+  background: var(--editor-key-black);
+  border: 1px solid var(--editor-key-black);
+  border-radius: 0 0 2px 2px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  touch-action: manipulation;
+}
+.virtual-black span {
+  padding-bottom: 5px;
+  font-size: 7px;
+  color: var(--editor-key-black-label);
+}
+.virtual-white:hover,
+.virtual-white.is-active {
+  background: var(--track-color, var(--color-selection));
+}
+.virtual-black:hover,
+.virtual-black.is-active {
+  background: color-mix(
+    in srgb,
+    var(--track-color, var(--color-selection)) 60%,
+    var(--editor-key-black)
+  );
+}
+.keyboard-caption {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding-bottom: 10px;
+  padding-left: 12px;
+  white-space: nowrap;
+}
+.keyboard-caption > span {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 1.8px;
+  color: var(--color-text-secondary);
+}
+.keyboard-caption small {
+  font-size: 9px;
+  color: var(--color-text-muted);
+}
+@media (max-width: 1150px) {
+  .keyboard-caption {
+    display: none;
+  }
+  .note-tools {
+    gap: 12px;
+    padding: 0 12px;
+  }
+  .editor-chord-tools {
+    gap: 3px;
+  }
+  .note-footer {
+    gap: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .editor-help {
+    display: none;
+  }
+  .drum-grid-scroll {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drum-step {
+    transition: none;
+  }
+}

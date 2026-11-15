@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <title>STUDIO audio test fixture</title>
+  </head>
+  <body>
+    <button id="activate">Activate audio</button>
+    <script type="module">
+      import { engine, encodeWav } from "/src/audio/engine.ts";
+      import {
+        createDemoProject,
+        createProject,
+        createTrack,
+        createPattern,
+        createMidiClip,
+        createNote,
+      } from "/src/domain/factories.ts";
+      window.audioTest = {
+        engine,
+        encodeWav,
+        createDemoProject,
+        createProject,
+        createTrack,
+        createPattern,
+        createMidiClip,
+        createNote,
+      };
+      document.getElementById("activate").onclick = () => engine.init();
+    </script>
+  </body>
+</html>
