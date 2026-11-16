@@ -18,6 +18,12 @@
   --color-danger: #a14b42;
   --color-note-text: #29292b;
   --color-note-selected: #494151;
+  --color-art-line: #969c94;
+  --color-art-secondary: #b8afa0;
+  --color-key-white: #ffffff;
+  --color-key-black: #34322f;
+  --color-key-label: #77736e;
+  --color-key-black-label: #b8b3ad;
 }
 [data-theme="dark"] {
   --color-background: #181818;
@@ -37,6 +43,12 @@
   --color-danger: #d39087;
   --color-note-text: #222;
   --color-note-selected: #eee6f2;
+  --color-art-line: #9aa69d;
+  --color-art-secondary: #8e8477;
+  --color-key-white: #bbb8b2;
+  --color-key-black: #252525;
+  --color-key-label: #55524e;
+  --color-key-black-label: #aaa7a3;
 }
 :root {
   --color-sage: #a9b6aa;
@@ -44,7 +56,9 @@
   --color-clay: #c2a69d;
   --color-taupe: #b8afa0;
   --color-slate: #8e9ba7;
-  --radius: 5px;
+  --font-ui: "DM Sans", Inter, system-ui, sans-serif;
+  --font-editorial: "Instrument Serif", Georgia, serif;
+  --radius: 4px;
   --space: 8px;
   color-scheme: light;
 }
@@ -73,7 +87,7 @@ body {
   margin: 0;
   background: var(--color-background);
   color: var(--color-text-primary);
-  font-family: "DM Sans", Inter, system-ui, sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
@@ -92,7 +106,10 @@ button {
   justify-content: center;
   gap: 7px;
   border-radius: var(--radius);
-  transition: background 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 button:hover {
   background: var(--color-surface-hover);
@@ -188,7 +205,7 @@ button svg {
   color: var(--color-text-secondary);
 }
 .empty-state h3 {
-  font-family: "Instrument Serif", Georgia, serif;
+  font-family: var(--font-editorial);
   font-size: 28px;
   font-weight: 400;
   margin: 12px 0;

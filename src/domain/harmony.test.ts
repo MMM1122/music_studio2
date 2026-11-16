@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { BAR } from "./models";
-import { createDemoProject, createProject } from "./factories";
+import {
+  createDemoProject,
+  createProject,
+  createPattern,
+  createNote,
+} from "./factories";
 import {
   detectChord,
   inferProgression,
@@ -248,5 +253,64 @@ describe("ideas that fit the song", () => {
       expect(idea.pattern.notes.some((n) => n.velocity < 0.3)).toBe(true);
       expect(idea.pattern.notes.some((n) => n.velocity > 0.8)).toBe(true);
     }
+  });
+});
+
+describe("musical arrangement regressions", () => {
+  it("anchors the intro and resolves the final section back to C minor", () => {
+    const demo = createDemoProject();
+    expect(inferProgression(demo, 0, 4).spans.map((c) => c.root)).toEqual([
+      0, 8, 3, 7,
+    ]);
+    const cadence = inferProgression(demo, BAR * 12, 4).spans;
+    expect(cadence.map((c) => c.root)).toEqual([0, 8, 7, 0]);
+    expect(cadence[3].quality).toBe("min9");
+    const ending = pitchedNotesBetween(demo, BAR * 15, BAR * 16);
+    expect(ending.length).toBeGreaterThan(0);
+    expect(ending.every((n) => n.startTick + n.durationTicks < BAR * 16)).toBe(
+      true,
+    );
+    const bass = demo.tracks.find((t) => t.instrument.type === "synth-bass")!;
+    const finalClip = bass.clips.at(-1)!;
+    if (finalClip.type !== "midi") throw new Error("Expected MIDI bass");
+    const dominant = demo.patterns[finalClip.patternId].notes.filter(
+      (n) => Math.floor(n.startTick / BAR) === 2,
+    );
+    expect(dominant.map((n) => pitchClass(n.pitch))).not.toContain(2);
+  });
+
+  it("moves strummed chords together without changing their internal timing or lengths", () => {
+    const pattern = createPattern("midi", BAR);
+    pattern.notes = [
+      createNote(36, 0, 120),
+      createNote(36, 240, 120),
+      createNote(36, 480, 120),
+      ...[60, 63, 67, 70].map((pitch, i) =>
+        createNote(pitch, 720 + i * 9, 360 - i * 9),
+      ),
+      ...[62, 65, 69, 72].map((pitch, i) =>
+        createNote(pitch, 1680 + i * 9, 240 - i * 9),
+      ),
+    ];
+    const snapshot = JSON.stringify(pattern);
+    const ideas = generateSuggestions(createProject(), "rhythm", 7, pattern);
+    expect(ideas[0].pattern.notes[3].startTick).toBe(840);
+    for (const idea of ideas) {
+      for (const offset of [3, 7]) {
+        const chord = idea.pattern.notes.slice(offset, offset + 4);
+        expect(chord.map((n) => n.startTick - chord[0].startTick)).toEqual([
+          0, 9, 18, 27,
+        ]);
+        expect(chord.map((n) => n.durationTicks)).toEqual(
+          pattern.notes.slice(offset, offset + 4).map((n) => n.durationTicks),
+        );
+      }
+      expect(
+        idea.pattern.notes.every(
+          (n) => n.startTick >= 0 && n.startTick + n.durationTicks <= BAR,
+        ),
+      ).toBe(true);
+    }
+    expect(JSON.stringify(pattern)).toBe(snapshot);
   });
 });

@@ -74,6 +74,7 @@ import { Modal } from "../components/Modal";
 import { SampleBrowser } from "../components/SampleBrowser";
 import { Ideas } from "../components/Ideas";
 import { LevelMeter, PositionReadout } from "../components/TransportReadouts";
+import { SessionArtwork } from "../components/SessionArtwork";
 
 type Panel =
   | "samples"
@@ -658,24 +659,32 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.01</div>
+            <div className="version-label">STUDIO / V.1.2</div>
           </div>
         </nav>
         <main className="workspace">
           <div className="workspace-heading">
-            <div>
-              <span className="eyebrow">YOUR CREATIVE SPACE</span>
+            <div className="heading-copy">
+              <span className="eyebrow">A SPACE FOR SOUND</span>
               <h1>
-                Make something <em>yours.</em>
+                Make room for <em>your sound.</em>
               </h1>
+              <p className="heading-subtitle">
+                A few notes. A little curiosity. Something only you could make.
+              </p>
             </div>
-            <div className="session-meta">
-              <span className="session-dot" /> {project.key}
-              <span>·</span>
-              {Math.round(duration)} sec<span>·</span>
-              <button onClick={() => setPanel("ideas")}>
-                Find inspiration <ArrowUpRight size={13} />
-              </button>
+            <div className="heading-aside">
+              <SessionArtwork />
+              <div className="heading-details">
+                <div className="session-meta">
+                  <span className="session-dot" /> {project.key}
+                  <span>·</span>
+                  {Math.round(duration)} sec
+                </div>
+                <button onClick={() => setPanel("ideas")}>
+                  Find inspiration <ArrowUpRight size={13} />
+                </button>
+              </div>
             </div>
           </div>
           <Arrangement

@@ -67,7 +67,7 @@
   font-family: inherit;
   font-size: 10px;
   border-radius: 3px;
-  padding: 0 6px;
+  padding: 0 7px;
 }
 .editor-tool-group select {
   border-color: var(--color-border);
@@ -140,8 +140,8 @@
   border-right: 1px solid var(--color-border);
   display: grid;
   place-items: center;
-  font-size: 8px;
-  letter-spacing: 1.2px;
+  font-size: 9px;
+  letter-spacing: 1px;
   color: var(--color-text-muted);
 }
 .roll-bar-labels {
@@ -187,7 +187,11 @@
   border-radius: 0;
 }
 .roll-keys button.black-key {
-  background: var(--color-surface);
+  background: color-mix(
+    in srgb,
+    var(--color-text-secondary) 17%,
+    var(--color-surface)
+  );
   border-right: 8px solid var(--color-surface-elevated);
   color: var(--color-text-muted);
 }
@@ -240,7 +244,7 @@
   position: absolute;
   border: 1px solid
     color-mix(in srgb, var(--note-accent) 82%, var(--color-text-primary));
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--note-accent);
   padding: 0;
   z-index: 2;
@@ -251,7 +255,7 @@
   text-align: left;
 }
 .midi-note span:first-child {
-  font-size: 8px;
+  font-size: 9px;
   line-height: 12px;
   position: absolute;
   left: 5px;
@@ -397,8 +401,8 @@
 }
 .drum-step-labels > span:first-child {
   text-align: left;
-  font-size: 8px;
-  letter-spacing: 1.2px;
+  font-size: 9px;
+  letter-spacing: 1px;
   padding-left: 6px;
 }
 .drum-step-labels > span.beat-start {
@@ -498,16 +502,10 @@
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   outline: none;
-  --editor-key-white: #fff;
-  --editor-key-black: #34322f;
-  --editor-key-label: #77736e;
-  --editor-key-black-label: #b8b3ad;
-}
-[data-theme="dark"] .keyboard {
-  --editor-key-white: #bbb8b2;
-  --editor-key-black: #252525;
-  --editor-key-label: #55524e;
-  --editor-key-black-label: #aaa7a3;
+  --editor-key-white: var(--color-key-white);
+  --editor-key-black: var(--color-key-black);
+  --editor-key-label: var(--color-key-label);
+  --editor-key-black-label: var(--color-key-black-label);
 }
 .keyboard-octave {
   width: 85px;

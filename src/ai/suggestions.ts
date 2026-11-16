@@ -65,12 +65,71 @@ interface Draft {
   notes: MidiNote[];
 }
 
+/** Read kick attacks at the destination, including repeated and trimmed drum clips.
+ * Positions remain in ticks so a suggested bass shares the drum's swing rather than
+ * adding an unrelated groove on top. A missing drum part simply uses the stock pocket. */
+interface KickPocket {
+  bars: number[][];
+  swing: number;
+}
+function readKickPocket(
+  project: SuggestionProject,
+  atTick: number,
+): KickPocket | undefined {
+  if (!project.tracks || !project.patterns) return undefined;
+  const from = Math.max(0, Math.floor(atTick / BAR) * BAR);
+  const to = from + BAR * 4;
+  const bars: number[][] = [[], [], [], []];
+  let swing = 0;
+  let found = false;
+  const solo = project.tracks.some((track) => track.mixer.solo);
+  for (const track of project.tracks) {
+    if (
+      track.type !== "drums" ||
+      track.mixer.mute ||
+      (solo && !track.mixer.solo)
+    )
+      continue;
+    for (const clip of track.clips) {
+      if (
+        clip.type !== "midi" ||
+        clip.startTick >= to ||
+        clip.startTick + clip.durationTicks <= from
+      )
+        continue;
+      const pattern = project.patterns[clip.patternId];
+      if (!pattern || pattern.lengthTicks <= 0) continue;
+      const repeats = clip.loop
+        ? Math.ceil(clip.durationTicks / pattern.lengthTicks)
+        : 1;
+      for (let repeat = 0; repeat < repeats; repeat++)
+        for (const note of pattern.notes) {
+          if (note.pitch !== 36) continue;
+          const local = repeat * pattern.lengthTicks + note.startTick;
+          const placed = clip.startTick + local;
+          if (local >= clip.durationTicks || placed < from || placed >= to)
+            continue;
+          const relative = placed - from;
+          bars[Math.floor(relative / BAR)].push(relative % BAR);
+          if (!found) swing = pattern.swing;
+          found = true;
+        }
+    }
+  }
+  if (!found) return undefined;
+  return {
+    bars: bars.map((bar) => [...new Set(bar)].sort((a, b) => a - b)),
+    swing,
+  };
+}
+
 /* ---------- Bass ---------- */
 function bassline(
   spans: ChordSpan[],
   scale: number[],
   variation: number,
   rand: () => number,
+  pocket?: KickPocket,
 ): Omit<Draft, "kind" | "lengthTicks"> {
   const notes: MidiNote[] = [];
   const roots = spans.map((chord) => nearestPitch(chord.root, 36, 28, 43));
@@ -92,21 +151,39 @@ function bassline(
     );
     const approach = variation === 1 ? next - 1 : (below ?? next - 1);
     const touch = () => 0.94 + rand() * 0.1;
+    const accents =
+      pocket?.bars[bar].filter((tick) => tick >= 360 && tick <= 1440) ?? [];
+    const lateAccent = accents.at(-1) ?? 1200;
     if (variation === 0) {
       notes.push(
-        createNote(root, at, 720, 0.86 * touch()),
-        createNote(fifth, at + 1200, 300, 0.66 * touch()),
+        createNote(root, at, Math.min(720, lateAccent - 80), 0.86 * touch()),
+        createNote(
+          fifth,
+          at + lateAccent,
+          Math.min(300, 1640 - lateAccent),
+          0.66 * touch(),
+        ),
         createNote(approach, at + 1680, 200, 0.58 * touch()),
       );
     } else if (variation === 1) {
+      const firstAccent =
+        accents.find((tick) => tick < lateAccent - 180) ??
+        Math.min(840, lateAccent - 240);
       notes.push(
-        createNote(root, at, 400, 0.88 * touch()),
-        createNote(root + 12, at + 600, 100, 0.5 * touch()),
-        createNote(root, at + 840, 200, 0.66 * touch()),
-        createNote(seventh, at + 1080, 220, 0.6 * touch()),
-        createNote(fifth, at + 1440, 200, 0.68 * touch()),
+        createNote(root, at, Math.min(400, firstAccent - 80), 0.88 * touch()),
+        createNote(root + 12, at + firstAccent, 110, 0.55 * touch()),
+        createNote(
+          fifth,
+          at + lateAccent,
+          Math.min(220, 1640 - lateAccent),
+          0.7 * touch(),
+        ),
         createNote(approach, at + 1800, 110, 0.56 * touch()),
       );
+      if (firstAccent >= 720)
+        notes.push(
+          createNote(seventh, at + firstAccent - 240, 100, 0.42 * touch()),
+        );
     } else {
       notes.push(
         createNote(root, at, 900, 0.84 * touch()),
@@ -118,12 +195,16 @@ function bassline(
   return {
     name: ["Room to breathe", "Off the beat", "A softer turn"][variation],
     description: [
-      "Root, fifth, and a step into the next chord",
-      "Syncopated, with octave pops and a leading tone",
+      pocket
+        ? "Root and fifth locked to your kick, with a step into the next chord"
+        : "Root, fifth, and a step into the next chord",
+      pocket
+        ? "Octave pops answer your kick accents"
+        : "Syncopated, with octave pops and a leading tone",
       "Long notes that leave the groove open",
     ][variation],
     instrument: "synth-bass",
-    swing: [0.1, 0.16, 0.08][variation],
+    swing: pocket?.swing ?? [0.1, 0.16, 0.08][variation],
     notes,
   };
 }
@@ -167,9 +248,9 @@ const CELLS: Record<string, Cell> = {
 };
 // Each phrase is a question (two bars) and an answer (two bars); the last bar always rests.
 const PHRASES = [
-  ["pickup", "fall", "hold", "rest"],
-  ["push", "fall", "climb", "rest"],
-  ["hold", "rest", "pickup", "fall"],
+  ["pickup", "fall", "pickup", "rest"],
+  ["push", "fall", "push", "rest"],
+  ["hold", "rest", "hold", "rest"],
 ];
 function melody(
   spans: ChordSpan[],
@@ -188,6 +269,7 @@ function melody(
     );
   const notes: MidiNote[] = [];
   let current = ladder[rung(67 + variation * 3)];
+  const motif: number[] = [];
   spans.forEach((chord, bar) => {
     const cell = CELLS[PHRASES[variation][bar % 4]];
     const tones = chordTones(chord);
@@ -199,16 +281,21 @@ function melody(
       const last = index === cell.length - 1;
       const strong = index === 0 || last || duration >= 400;
       const stride = rand() < 0.3 ? 2 : 1;
+      // Bring back the first bar's contour in bar three; chord-tone projection below
+      // adapts it to the new harmony while retaining a recognizable musical idea.
       const target =
-        ladder[
-          Math.min(
-            ladder.length - 1,
-            Math.max(
-              0,
-              rung(current) + (index === 0 && bar > 0 ? 0 : direction * stride),
-            ),
-          )
-        ];
+        bar === 2 && motif[index] !== undefined
+          ? motif[index]
+          : ladder[
+              Math.min(
+                ladder.length - 1,
+                Math.max(
+                  0,
+                  rung(current) +
+                    (index === 0 && bar > 0 ? 0 : direction * stride),
+                ),
+              )
+            ];
       // Notes the ear lands on belong to the chord; the notes between them pass through the scale.
       let pitch = target;
       if (strong) {
@@ -226,15 +313,16 @@ function melody(
           (strong ? 0.7 : 0.58) + rand() * 0.1,
         ),
       );
+      if (bar === 0) motif.push(pitch);
       current = pitch;
     });
   });
   return {
     name: ["Room to breathe", "Off the beat", "A softer turn"][variation],
     description: [
-      "A question, then an answer that lands on chord tones",
-      "Starts on the beat and climbs in the third bar",
-      "Long notes first, movement after",
+      "A short motif returns over the next chord, then resolves",
+      "A recurring upbeat phrase with a quieter answer",
+      "A spacious motif, repeated with a new harmonic colour",
     ][variation],
     instrument: variation === 1 ? "pluck" : "lead-synth",
     swing: 0.12,
@@ -424,27 +512,42 @@ function rhythm(
   variation: number,
   rand: () => number,
 ): MidiNote[] {
-  return source.notes.map((note, index) => {
-    // Push or pull every third note by a sixteenth; leave downbeats where they are.
-    const onDownbeat = note.startTick % BAR === 0;
-    const shift =
-      !onDownbeat && (index + variation) % 3 === 0
-        ? variation === 1
-          ? -STEP
-          : STEP
-        : 0;
-    const startTick = Math.max(
-      0,
-      Math.min(source.lengthTicks - note.durationTicks, note.startTick + shift),
-    );
+  // Notes in one strummed chord share an attack cell. Move that cell together,
+  // preserving its voicing, strum spacing and velocity balance.
+  const groups = new Map<number, MidiNote[]>();
+  for (const note of source.notes) {
+    const cell = Math.round(note.startTick / STEP);
+    groups.set(cell, [...(groups.get(cell) ?? []), note]);
+  }
+  const changes = new Map<string, { shift: number; touch: number }>();
+  [...groups.entries()]
+    .sort(([a], [b]) => a - b)
+    .forEach(([cell, notes], index) => {
+      const onDownbeat = (cell * STEP) % BAR === 0;
+      const proposed =
+        !onDownbeat && (index + variation) % 3 === 0
+          ? variation === 1
+            ? -STEP
+            : STEP
+          : 0;
+      const earliest = Math.min(...notes.map((note) => note.startTick));
+      const lastEnd = Math.max(
+        ...notes.map((note) => note.startTick + note.durationTicks),
+      );
+      const shift = Math.max(
+        -earliest,
+        Math.min(source.lengthTicks - lastEnd, proposed),
+      );
+      const touch = 0.92 + rand() * 0.12;
+      notes.forEach((note) => changes.set(note.id, { shift, touch }));
+    });
+  return source.notes.map((note) => {
+    const change = changes.get(note.id)!;
     return {
       ...note,
       id: uid(),
-      startTick,
-      velocity: Math.min(
-        1,
-        Math.max(0.05, note.velocity * (0.85 + rand() * 0.3)),
-      ),
+      startTick: note.startTick + change.shift,
+      velocity: Math.min(1, Math.max(0.05, note.velocity * change.touch)),
     };
   });
 }
@@ -546,7 +649,13 @@ export function generateSuggestions(
       };
     else if (category === "bassline")
       draft = {
-        ...bassline(spans, scale, variation, rand),
+        ...bassline(
+          spans,
+          scale,
+          variation,
+          rand,
+          readKickPocket(project, atTick),
+        ),
         kind: "midi",
         lengthTicks: BAR * 4,
       };

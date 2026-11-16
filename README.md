@@ -6,7 +6,7 @@
 
 Publicly accessible in your browser. No login or installation required. Click **Play** to start audio.
 
-The live website currently runs the previously deployed STUDIO version. This repository contains the updated 1.1 source, which has not yet been deployed to that website.
+The public website is deployed from this repository. Existing saved sessions stay unchanged; choose **Projects → Open demo session** to hear the latest musical arrangement.
 
 A working browser music studio for composing original R&B, neo-soul, electronic music, and beats. Built with React, strict TypeScript, Tone.js, and Web Audio. No account, paid samples, or AI credentials are needed.
 
@@ -31,7 +31,7 @@ npm run test:e2e    # Chrome browser tests, including real audio and WAV analysi
 npm run format      # format source and documentation
 ```
 
-Browser tests use the installed Google Chrome. For bundled Playwright Chromium, remove `channel: 'chrome'` in `playwright.config.ts`, then run `npx playwright install chromium`.
+Browser tests use installed Google Chrome locally and bundled Playwright Chromium when `CI=1`. To use bundled Chromium locally, run `npx playwright install chromium` followed by `CI=1 npm run test:e2e`.
 
 ## Make a composition
 

@@ -47,7 +47,8 @@ export function DrumSequencer({
   function toggle(pitch: number, step: number, selectOnly: boolean) {
     const startTick = bar * BAR + step * 120;
     const note = pattern.notes.find(
-      (n) => n.pitch === pitch && n.startTick === startTick,
+      (n) =>
+        n.pitch === pitch && Math.floor(n.startTick / 120) === startTick / 120,
     );
     if (selectOnly && note) {
       setSelected(note.id);
@@ -168,7 +169,7 @@ export function DrumSequencer({
                 const note = pattern.notes.find(
                   (n) =>
                     n.pitch === drum.pitch &&
-                    n.startTick === bar * BAR + step * 120,
+                    Math.floor(n.startTick / 120) === bar * 16 + step,
                 );
                 return (
                   <button

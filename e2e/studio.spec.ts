@@ -360,3 +360,31 @@ test("every instrument preset can be added, auditioned, played and exported with
   expect((await downloadPromise).suggestedFilename()).toBe("All voices.wav");
   expect(errors).toEqual([]);
 });
+
+test("humanized drum hits remain visible and editable in their original steps", async ({
+  page,
+}) => {
+  await boot(page);
+  await page.locator(".track-row").first().locator(".clip").nth(1).dblclick();
+  await expect(
+    page.getByRole("button", { name: "Snare step 5, on", exact: true }),
+  ).toBeVisible();
+  const before = await project(page);
+  const clip = before.tracks[0].clips[1];
+  if (clip.type !== "midi") throw new Error("Expected drum MIDI clip");
+  const hits = before.patterns[clip.patternId].notes.filter(
+    (n) => n.pitch === 38 && Math.floor(n.startTick / 120) === 4,
+  );
+  expect(hits).toHaveLength(1);
+  expect(hits[0].startTick).toBeGreaterThan(480);
+  await page
+    .getByRole("button", { name: "Snare step 5, on", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Snare step 5, off", exact: true }),
+  ).toBeVisible();
+  const after = await project(page);
+  expect(
+    after.patterns[clip.patternId].notes.some((n) => n.id === hits[0].id),
+  ).toBe(false);
+});
