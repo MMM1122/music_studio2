@@ -44,6 +44,8 @@ export const patternSchema = z
     }
   });
 const instrumentSchema = z.object({
+  harmonics: z.array(unit).length(8).optional(),
+  presetName: z.string().max(80).optional(),
   type: z.enum(INSTRUMENT_TYPES),
   attack: z.number().min(0).max(10),
   release: z.number().min(0).max(30),

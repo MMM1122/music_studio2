@@ -9,7 +9,8 @@ export type InstrumentType =
   | "synth-pad"
   | "lead-synth"
   | "pluck"
-  | "drum-kit";
+  | "drum-kit"
+  | "fourier";
 export const INSTRUMENT_TYPES = [
   "electric-piano",
   "felt-piano",
@@ -19,6 +20,7 @@ export const INSTRUMENT_TYPES = [
   "lead-synth",
   "pluck",
   "drum-kit",
+  "fourier",
 ] as const satisfies readonly InstrumentType[];
 export type TrackType = "midi" | "drums" | "audio";
 export type TrackColor = "clay" | "slate" | "mauve" | "sage" | "taupe";
@@ -38,6 +40,8 @@ export interface Pattern {
   swing: number;
 }
 export interface Instrument {
+  harmonics?: number[];
+  presetName?: string;
   type: InstrumentType;
   attack: number;
   release: number;
@@ -225,6 +229,18 @@ export const INSTRUMENTS: InstrumentPreset[] = [
     brightness: 0.55,
     volume: 0.72,
     reverb: 0.06,
+    delay: 0,
+  },
+  {
+    type: "fourier",
+    name: "Fourier Synth",
+    color: "slate",
+    description: "Eight harmonics, your own sound",
+    attack: 0.015,
+    release: 0.3,
+    brightness: 0.5,
+    volume: 0.65,
+    reverb: 0.1,
     delay: 0,
   },
 ];

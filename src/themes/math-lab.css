@@ -1,0 +1,526 @@
+.math-lab {
+  background: var(--color-surface);
+  min-width: 0;
+}
+.lab-heading {
+  padding: 30px 34px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  gap: 20px;
+}
+.lab-heading h1 {
+  font-size: 38px;
+}
+.lab-heading p {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+.lab-heading > .button {
+  flex-shrink: 0;
+}
+.lab-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 34px;
+  gap: 32px;
+  flex-shrink: 0;
+}
+.lab-tabs > button {
+  padding: 17px 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 12px;
+  gap: 10px;
+  color: var(--color-text-secondary);
+}
+.lab-tabs > button[aria-selected="true"] {
+  border-color: var(--color-text-primary);
+  color: var(--color-text-primary);
+}
+.lab-tabs > button > span {
+  font-size: 9px;
+  opacity: 0.5;
+}
+.lab-content {
+  padding: 27px 34px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.lab-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+.lab-section-title h2 {
+  font-family: var(--font-editorial);
+  font-size: 27px;
+  font-weight: 400;
+  margin: 7px 0 0;
+}
+.lab-badge,
+.lab-formula {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.lab-formula {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 19px;
+}
+.lab-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 20px;
+  min-width: 0;
+}
+.lab-composer-grid {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
+}
+.lab-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.math-lab label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  min-width: 0;
+}
+.math-lab select,
+.math-lab input:not([type="range"]):not([type="checkbox"]) {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 9px 10px;
+  min-width: 0;
+  width: 100%;
+  border-radius: 3px;
+  font-size: 11px;
+  height: 35px;
+}
+.math-lab input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-sage);
+  cursor: pointer;
+}
+.math-lab input[type="checkbox"] {
+  accent-color: var(--color-sage);
+}
+.math-lab .lab-expression {
+  font-family: monospace;
+  font-size: 12px !important;
+}
+.lab-slider > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lab-slider output {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+.lab-hint {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 6px 0;
+}
+.lab-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--color-text-secondary);
+  margin-bottom: 18px;
+}
+.lab-card-heading .text-button {
+  font-size: 10px;
+  gap: 6px;
+  letter-spacing: 0;
+  padding: 0;
+}
+.lab-graph {
+  display: block;
+  width: 100%;
+  height: 210px;
+  overflow: hidden;
+}
+.lab-graph line {
+  stroke: var(--color-border);
+  stroke-width: 0.6;
+}
+.lab-axis {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  fill: none;
+  opacity: 0.5;
+}
+.lab-curve {
+  stroke: var(--color-sage);
+  stroke-width: 2.5;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+.lab-graph-caption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  margin: 5px 0 16px;
+}
+.lab-context-controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(65px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.lab-options {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.lab-options label {
+  flex-direction: row;
+  align-items: center;
+}
+.lab-error {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-clay) 20%, transparent);
+  border-left: 3px solid var(--color-clay);
+  padding: 12px 16px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.lab-sequence {
+  display: grid;
+  gap: 6px;
+  overflow: auto;
+  padding: 0 0 12px;
+}
+.lab-step {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 6px 4px 4px;
+  align-items: center;
+}
+.lab-step > span {
+  font-size: 8px;
+  opacity: 0.6;
+}
+.lab-note-glyph {
+  width: 100%;
+  height: 55px;
+  position: relative;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 13px,
+    var(--color-border) 14px
+  );
+}
+.lab-note-glyph i {
+  position: absolute;
+  width: 85%;
+  left: 7.5%;
+  height: 6px;
+  background: var(--color-mauve);
+  border-radius: 1px;
+  transition: bottom 0.18s;
+}
+.lab-step select {
+  font-size: 9px !important;
+  padding: 4px 1px !important;
+  height: 27px !important;
+}
+.lab-playback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+  margin-top: 8px;
+}
+.lab-playback .lab-inline {
+  flex-direction: row;
+  align-items: center;
+  margin: 0 6px;
+}
+.lab-inline select {
+  width: 165px !important;
+}
+.math-lab .button {
+  font-size: 11px;
+  gap: 6px;
+  white-space: nowrap;
+}
+.math-lab .button.primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+}
+.lab-play-state {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+.lab-harmonics {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+.lab-harmonics > label {
+  align-items: center;
+  font-size: 9px;
+}
+.lab-harmonics output {
+  font-variant-numeric: tabular-nums;
+}
+.lab-harmonic-bar {
+  height: 85px;
+  width: 65%;
+  background: var(--color-surface);
+  position: relative;
+  border-bottom: 1px solid var(--color-border);
+}
+.lab-harmonic-bar i {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: var(--color-slate);
+  opacity: 0.65;
+  transition: height 0.1s;
+}
+.lab-keyboard {
+  display: flex;
+  gap: 5px;
+  max-width: 780px;
+  margin: 0 auto;
+}
+.lab-keyboard > button {
+  flex: 1;
+  height: 94px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 0 0 4px 4px;
+  touch-action: none;
+  user-select: none;
+  font-size: 9px;
+}
+.lab-keyboard > button.white {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+.lab-keyboard > button.black {
+  background: var(--color-text-primary);
+  color: var(--color-surface);
+  height: 68px;
+}
+.lab-keyboard > button.held {
+  background: var(--color-sage);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -3px 0 var(--color-text-secondary);
+}
+.lab-save-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.lab-save-row label {
+  flex: 1;
+  min-width: 150px;
+  max-width: 270px;
+}
+.lab-save-row > .button {
+  height: 35px;
+}
+.lab-probabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lab-probability {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px;
+  gap: 14px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 6px 0;
+  border-radius: 0;
+}
+.lab-probability > span {
+  font-size: 12px;
+}
+.lab-probability > div {
+  height: 24px;
+  background: var(--color-surface);
+  position: relative;
+}
+.lab-probability i {
+  display: block;
+  height: 100%;
+  background: var(--color-mauve);
+  opacity: 0.65;
+  transition: width 0.2s;
+}
+.lab-probability b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--color-text-secondary);
+  transition: left 0.2s;
+}
+.lab-probability output {
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.lab-probability small {
+  display: block;
+  font-size: 8px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+.lab-proposal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border);
+  padding-top: 18px;
+  margin-top: 18px;
+}
+.lab-proposal > div {
+  margin-right: auto;
+}
+.lab-proposal strong {
+  display: block;
+  font-family: var(--font-editorial);
+  font-size: 23px;
+  font-weight: 400;
+  margin-top: 6px;
+}
+.lab-feedback {
+  min-height: 36px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 15px 0 0;
+}
+.lab-explanation {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  margin-top: 15px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+.lab-explanation summary {
+  cursor: pointer;
+}
+.lab-actions {
+  display: flex;
+  gap: 8px;
+}
+.lab-footnote {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+.lab-footnote > span:first-child {
+  font-family: var(--font-editorial);
+  font-size: 17px;
+  font-style: italic;
+}
+.math-lab button:focus-visible,
+.math-lab input:focus-visible,
+.math-lab select:focus-visible {
+  outline: 2px solid var(--color-sage);
+  outline-offset: 3px;
+}
+@media (max-width: 1100px) {
+  .lab-heading,
+  .lab-content {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+  .lab-tabs {
+    padding-left: 22px;
+  }
+  .lab-composer-grid {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .lab-context-controls {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .lab-harmonics {
+    gap: 8px;
+  }
+  .lab-proposal .button {
+    font-size: 10px;
+  }
+}
+@media (max-width: 800px) {
+  .lab-composer-grid {
+    grid-template-columns: 1fr;
+  }
+  .lab-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .lab-controls > .lab-hint {
+    grid-column: 1/-1;
+  }
+  .lab-heading h1 {
+    font-size: 30px;
+  }
+  .lab-formula {
+    display: none;
+  }
+  .lab-section-title h2 {
+    font-size: 24px;
+  }
+  .lab-footnote {
+    flex-direction: column;
+  }
+  .lab-graph {
+    height: 175px;
+  }
+  .lab-probability {
+    grid-template-columns: 32px 1fr 70px;
+  }
+  .lab-keyboard > button {
+    font-size: 8px;
+  }
+  .lab-card {
+    padding: 15px;
+  }
+}

@@ -1,5 +1,12 @@
 # STUDIO release notes
 
+## Version 1.3 — Mathematical Music Lab
+
+- Added integrated Functions, Fourier and Bayesian workspaces with light/dark styling, actual audio preview, editable sequences and direct Studio insertion.
+- Added bounded expression parsing, 16-step scale mapping, eight-harmonic synthesis for live and sequenced notes, named local sounds, and context-specific Dirichlet evidence with separately documented rejection/exploration rules.
+- Added versioned local recovery, project-compatible harmonic snapshots, mathematical regression tests and browser audio/integration checks.
+- Existing projects, instruments, editing, themes, samples and exports are retained. See [MATH_LAB.md](MATH_LAB.md) for use, mathematics and implementation details.
+
 ## Version 1.2
 
 **A quieter visual identity.** Gallery Light and Dark now share warmer neutrals, editorial type, a fine-line sound study, softer track colours, and clearer clip detail. Consolidated layout rules keep the arrangement and note editor usable on laptop screens.

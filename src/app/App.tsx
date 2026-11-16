@@ -19,6 +19,7 @@ import {
   Music2,
   AudioLines,
   Sparkles,
+  Sigma,
   Settings2,
   ChevronDown,
   ChevronUp,
@@ -38,6 +39,8 @@ import {
   type Project,
   type InstrumentType,
   type Clip,
+  type Pattern,
+  type Instrument,
 } from "../domain/models";
 import {
   createProject,
@@ -76,6 +79,10 @@ import { Ideas } from "../components/Ideas";
 import { LevelMeter, PositionReadout } from "../components/TransportReadouts";
 import { SessionArtwork } from "../components/SessionArtwork";
 
+import { MathLab } from "../components/MathLab";
+import { useMathLabStore } from "../stores/mathLabStore";
+import { insertLabPattern, applyLabInstrument } from "../math/studio";
+
 type Panel =
   | "samples"
   | "ideas"
@@ -86,6 +93,8 @@ type Panel =
   | "help"
   | null;
 export function App() {
+  const workspace = useMathLabStore((state) => state.workspace);
+  const setWorkspace = useMathLabStore((state) => state.setWorkspace);
   const {
     project,
     selectedTrackId,
@@ -234,6 +243,61 @@ export function App() {
     engine.stopPreview();
     refreshTransport();
   }, []);
+  function changeWorkspace(next: "studio" | "math") {
+    engine.pause();
+    engine.stopPreview();
+    engine.stopLabNotes();
+    refreshTransport();
+    setPanel(null);
+    setWorkspace(next);
+  }
+  function addFromLab(source: Pattern, instrument: Instrument, bpm: number) {
+    try {
+      engine.stopPreview();
+      engine.stopLabNotes();
+      let inserted: { trackId: string; clipId: string } | undefined;
+      update("Add Math Lab sequence", (draft) => {
+        inserted = insertLabPattern(
+          draft,
+          source,
+          instrument,
+          engine.getTick(),
+          bpm,
+        );
+      });
+      if (inserted) selectClip(inserted.trackId, inserted.clipId);
+      setEditor(true);
+      setInspector(true);
+      setWorkspace("studio");
+      refreshTransport();
+      notify(
+        `Added to Studio at ${useProjectStore.getState().project.transport.bpm} BPM. Edit the notes in the piano roll.`,
+      );
+    } catch (error) {
+      notify(errorMessage(error));
+    }
+  }
+  function applyFromLab(instrument: Instrument, trackId?: string) {
+    try {
+      engine.stopPreview();
+      engine.stopLabNotes();
+      let applied: { trackId: string; clipId: string | null } | undefined;
+      update("Apply Math Lab instrument", (draft) => {
+        applied = applyLabInstrument(draft, instrument, trackId);
+      });
+      if (applied) selectClip(applied.trackId, applied.clipId);
+      setEditor(true);
+      setInspector(true);
+      setWorkspace("studio");
+      notify(
+        trackId
+          ? "Fourier sound applied. Your existing notes will use this instrument."
+          : "Fourier track added. Draw notes in the piano roll to compose with it.",
+      );
+    } catch (error) {
+      notify(errorMessage(error));
+    }
+  }
   async function save() {
     setSaveStatus("Saving…");
     try {
@@ -294,7 +358,7 @@ export function App() {
         )
       )
         return;
-      if (panel) return;
+      if (panel || workspace === "math" || e.defaultPrevented) return;
       const mod = e.metaKey || e.ctrlKey;
       if (e.code === "Space") {
         e.preventDefault();
@@ -355,6 +419,7 @@ export function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [
+    workspace,
     panel,
     clip,
     track,
@@ -592,13 +657,23 @@ export function App() {
             </button>
           </div>
           <button
-            className="nav-item active"
-            title="Create"
-            onClick={() => setPanel(null)}
+            className={`nav-item ${workspace === "studio" ? "active" : ""}`}
+            title="Studio"
+            aria-current={workspace === "studio" ? "page" : undefined}
+            onClick={() => changeWorkspace("studio")}
           >
             <Music2 />
-            <span>Create</span>
-            <span className="nav-dot" />
+            <span>Studio</span>
+            {workspace === "studio" && <span className="nav-dot" />}
+          </button>
+          <button
+            className={`nav-item ${workspace === "math" ? "active" : ""}`}
+            title="Math Lab"
+            aria-current={workspace === "math" ? "page" : undefined}
+            onClick={() => changeWorkspace("math")}
+          >
+            <Sigma />
+            <span>Math Lab</span>
           </button>
           <button
             className={`nav-item ${panel === "samples" ? "selected" : ""}`}
@@ -659,327 +734,347 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.2</div>
+            <div className="version-label">STUDIO / V.1.3</div>
           </div>
         </nav>
-        <main className="workspace">
-          <div className="workspace-heading">
-            <div className="heading-copy">
-              <span className="eyebrow">A SPACE FOR SOUND</span>
-              <h1>
-                Make room for <em>your sound.</em>
-              </h1>
-              <p className="heading-subtitle">
-                A few notes. A little curiosity. Something only you could make.
-              </p>
-            </div>
-            <div className="heading-aside">
-              <SessionArtwork />
-              <div className="heading-details">
-                <div className="session-meta">
-                  <span className="session-dot" /> {project.key}
-                  <span>·</span>
-                  {Math.round(duration)} sec
-                </div>
-                <button onClick={() => setPanel("ideas")}>
-                  Find inspiration <ArrowUpRight size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
-          <Arrangement
-            onSeek={(value) => {
-              engine.seek(value);
-              refreshTransport();
-            }}
-            onAddTrack={() => setPanel("add-track")}
-            onOpenEditor={() => setEditor(true)}
-            onInspector={() => setInspector(!inspector)}
+        {workspace === "math" ? (
+          <MathLab
+            onAdd={addFromLab}
+            onApplyInstrument={applyFromLab}
+            onStudio={() => changeWorkspace("studio")}
+            notify={notify}
           />
-          <section
-            className="editor-section"
-            data-color={track?.color ?? "mauve"}
-          >
-            <div className="section-toolbar editor-header">
-              <div className="section-title">
-                <span className="section-index">02</span>
-                <button
-                  className="editor-toggle"
-                  onClick={() => setEditor(!editor)}
-                >
-                  {track?.type === "drums"
-                    ? "Drum sequencer"
-                    : clip?.type === "audio"
-                      ? "Audio clip"
-                      : "Piano roll"}
-                  {editor ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                </button>
-                {track && (
-                  <span className="editor-track-tag">
-                    <i />
-                    {track.name}
-                  </span>
-                )}
+        ) : (
+          <main className="workspace">
+            <div className="workspace-heading">
+              <div className="heading-copy">
+                <span className="eyebrow">A SPACE FOR SOUND</span>
+                <h1>
+                  Make room for <em>your sound.</em>
+                </h1>
+                <p className="heading-subtitle">
+                  A few notes. A little curiosity. Something only you could
+                  make.
+                </p>
               </div>
-              <div className="toolbar-actions">
-                {pattern && (
-                  <>
-                    <button
-                      className="icon-button"
-                      title={
-                        patternPreview
-                          ? "Stop pattern preview"
-                          : "Preview pattern independently"
-                      }
-                      onClick={() => {
-                        if (patternPreview) {
-                          engine.stopPreview();
-                          refreshTransport();
-                        } else
-                          void engine
-                            .previewPattern(project, pattern, track?.instrument)
-                            .then(refreshTransport)
-                            .catch((e) => notify(errorMessage(e)));
-                      }}
-                    >
-                      {patternPreview ? <Square /> : <Play />}
-                    </button>
-                    <button
-                      className="icon-button"
-                      title="Duplicate pattern"
-                      onClick={() => newPattern(true)}
-                    >
-                      <Copy />
-                    </button>
-                    <button
-                      className="icon-button"
-                      title="Delete pattern and its clips"
-                      onClick={() => {
-                        update("Delete pattern", (p) => {
-                          delete p.patterns[pattern.id];
-                          p.tracks.forEach(
-                            (t) =>
-                              (t.clips = t.clips.filter(
-                                (c) =>
-                                  c.type !== "midi" ||
-                                  c.patternId !== pattern.id,
-                              )),
-                          );
-                        });
-                        setPatternId(null);
-                      }}
-                    >
-                      <Trash2 />
-                    </button>
-                  </>
-                )}
-                <button
-                  className="icon-button"
-                  title="Toggle keyboard"
-                  onClick={() => setKeyboard(!keyboard)}
-                >
-                  <KeyboardMusic />
-                </button>
-                {!inspector && (
+              <div className="heading-aside">
+                <SessionArtwork />
+                <div className="heading-details">
+                  <div className="session-meta">
+                    <span className="session-dot" /> {project.key}
+                    <span>·</span>
+                    {Math.round(duration)} sec
+                  </div>
+                  <button onClick={() => setPanel("ideas")}>
+                    Find inspiration <ArrowUpRight size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <Arrangement
+              onSeek={(value) => {
+                engine.seek(value);
+                refreshTransport();
+              }}
+              onAddTrack={() => setPanel("add-track")}
+              onOpenEditor={() => setEditor(true)}
+              onInspector={() => setInspector(!inspector)}
+            />
+            <section
+              className="editor-section"
+              data-color={track?.color ?? "mauve"}
+            >
+              <div className="section-toolbar editor-header">
+                <div className="section-title">
+                  <span className="section-index">02</span>
+                  <button
+                    className="editor-toggle"
+                    onClick={() => setEditor(!editor)}
+                  >
+                    {track?.type === "drums"
+                      ? "Drum sequencer"
+                      : clip?.type === "audio"
+                        ? "Audio clip"
+                        : "Piano roll"}
+                    {editor ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronUp size={14} />
+                    )}
+                  </button>
+                  {track && (
+                    <span className="editor-track-tag">
+                      <i />
+                      {track.name}
+                    </span>
+                  )}
+                </div>
+                <div className="toolbar-actions">
+                  {pattern && (
+                    <>
+                      <button
+                        className="icon-button"
+                        title={
+                          patternPreview
+                            ? "Stop pattern preview"
+                            : "Preview pattern independently"
+                        }
+                        onClick={() => {
+                          if (patternPreview) {
+                            engine.stopPreview();
+                            refreshTransport();
+                          } else
+                            void engine
+                              .previewPattern(
+                                project,
+                                pattern,
+                                track?.instrument,
+                              )
+                              .then(refreshTransport)
+                              .catch((e) => notify(errorMessage(e)));
+                        }}
+                      >
+                        {patternPreview ? <Square /> : <Play />}
+                      </button>
+                      <button
+                        className="icon-button"
+                        title="Duplicate pattern"
+                        onClick={() => newPattern(true)}
+                      >
+                        <Copy />
+                      </button>
+                      <button
+                        className="icon-button"
+                        title="Delete pattern and its clips"
+                        onClick={() => {
+                          update("Delete pattern", (p) => {
+                            delete p.patterns[pattern.id];
+                            p.tracks.forEach(
+                              (t) =>
+                                (t.clips = t.clips.filter(
+                                  (c) =>
+                                    c.type !== "midi" ||
+                                    c.patternId !== pattern.id,
+                                )),
+                            );
+                          });
+                          setPatternId(null);
+                        }}
+                      >
+                        <Trash2 />
+                      </button>
+                    </>
+                  )}
                   <button
                     className="icon-button"
-                    title="Open inspector"
-                    onClick={() => setInspector(true)}
+                    title="Toggle keyboard"
+                    onClick={() => setKeyboard(!keyboard)}
                   >
-                    <PanelRightOpen />
+                    <KeyboardMusic />
                   </button>
-                )}
+                  {!inspector && (
+                    <button
+                      className="icon-button"
+                      title="Open inspector"
+                      onClick={() => setInspector(true)}
+                    >
+                      <PanelRightOpen />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-            {editor && (
-              <>
-                {track && track.type !== "audio" && (
-                  <div className="pattern-toolbar">
-                    <select
-                      aria-label="Active pattern"
-                      value={pattern?.id ?? ""}
-                      onChange={(e) => {
-                        setPatternId(e.target.value);
-                        selectNotes([]);
-                      }}
-                    >
-                      <option value="" disabled>
-                        Select a pattern
-                      </option>
-                      {Object.values(project.patterns)
-                        .filter(
-                          (p) =>
-                            p.kind ===
-                            (track.type === "drums" ? "drums" : "midi"),
-                        )
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      title="Create new pattern"
-                      className="button small"
-                      onClick={() => newPattern()}
-                    >
-                      <Plus />
-                      New
-                    </button>
-                    <button
-                      className="button small"
-                      disabled={!pattern}
-                      title="Insert pattern at playhead"
-                      onClick={insertPattern}
-                    >
-                      Insert into song
-                    </button>
-                    {pattern && (
-                      <label className="pattern-length">
-                        Length
-                        <select
-                          aria-label="Pattern length"
-                          value={pattern.lengthTicks / BAR}
-                          onChange={(e) =>
-                            update("Resize pattern", (p) => {
-                              const x = p.patterns[pattern.id];
-                              x.lengthTicks = +e.target.value * BAR;
-                              x.notes = x.notes
-                                .filter((n) => n.startTick < x.lengthTicks)
-                                .map((n) => ({
-                                  ...n,
-                                  durationTicks: Math.min(
-                                    n.durationTicks,
-                                    x.lengthTicks - n.startTick,
-                                  ),
-                                }));
-                            })
-                          }
-                        >
-                          {[1, 2, 4, 8, 16].map((n) => (
-                            <option key={n} value={n}>
-                              {n} {n === 1 ? "bar" : "bars"}
+              {editor && (
+                <>
+                  {track && track.type !== "audio" && (
+                    <div className="pattern-toolbar">
+                      <select
+                        aria-label="Active pattern"
+                        value={pattern?.id ?? ""}
+                        onChange={(e) => {
+                          setPatternId(e.target.value);
+                          selectNotes([]);
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select a pattern
+                        </option>
+                        {Object.values(project.patterns)
+                          .filter(
+                            (p) =>
+                              p.kind ===
+                              (track.type === "drums" ? "drums" : "midi"),
+                          )
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
                             </option>
                           ))}
-                        </select>
-                      </label>
-                    )}
-                  </div>
-                )}
-                {pattern && track ? (
-                  pattern.kind === "drums" ? (
-                    <DrumSequencer
-                      pattern={pattern}
-                      onChange={(notes, label) =>
-                        update(label, (p) => {
-                          p.patterns[pattern.id].notes = notes;
-                        })
-                      }
-                      onSwingChange={(swing) =>
-                        update("Set swing", (p) => {
-                          p.patterns[pattern.id].swing = swing;
-                        })
-                      }
-                      onAudition={audition}
-                      clipStart={patternId ? null : (clip?.startTick ?? null)}
-                    />
-                  ) : (
-                    <PianoRoll
-                      pattern={pattern}
-                      selectedIds={selectedNoteIds}
-                      onSelect={selectNotes}
-                      onChange={(notes, label) =>
-                        update(label, (p) => {
-                          p.patterns[pattern.id].notes = notes;
-                        })
-                      }
-                      onAudition={audition}
-                      musicalKey={project.key}
-                      clipStart={patternId ? null : (clip?.startTick ?? null)}
-                    />
-                  )
-                ) : clip?.type === "audio" ? (
-                  <div className="audio-clip-editor">
-                    <AudioLines size={48} />
-                    <div>
-                      <h3>{clip.name}</h3>
-                      <p>
-                        {project.assets
-                          .find((a) => a.id === clip.assetId)
-                          ?.duration.toFixed(2)}{" "}
-                        seconds · Original speed
-                      </p>
-                      <p>
-                        Move or resize this clip in the arrangement. Adjust
-                        trimming, looping, and gain in the inspector.
-                      </p>
+                      </select>
+                      <button
+                        title="Create new pattern"
+                        className="button small"
+                        onClick={() => newPattern()}
+                      >
+                        <Plus />
+                        New
+                      </button>
                       <button
                         className="button small"
-                        onClick={() => setInspector(true)}
+                        disabled={!pattern}
+                        title="Insert pattern at playhead"
+                        onClick={insertPattern}
                       >
-                        <SlidersHorizontal />
-                        Open clip settings
+                        Insert into song
+                      </button>
+                      {pattern && (
+                        <label className="pattern-length">
+                          Length
+                          <select
+                            aria-label="Pattern length"
+                            value={pattern.lengthTicks / BAR}
+                            onChange={(e) =>
+                              update("Resize pattern", (p) => {
+                                const x = p.patterns[pattern.id];
+                                x.lengthTicks = +e.target.value * BAR;
+                                x.notes = x.notes
+                                  .filter((n) => n.startTick < x.lengthTicks)
+                                  .map((n) => ({
+                                    ...n,
+                                    durationTicks: Math.min(
+                                      n.durationTicks,
+                                      x.lengthTicks - n.startTick,
+                                    ),
+                                  }));
+                              })
+                            }
+                          >
+                            {[1, 2, 4, 8, 16].map((n) => (
+                              <option key={n} value={n}>
+                                {n} {n === 1 ? "bar" : "bars"}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  )}
+                  {pattern && track ? (
+                    pattern.kind === "drums" ? (
+                      <DrumSequencer
+                        pattern={pattern}
+                        onChange={(notes, label) =>
+                          update(label, (p) => {
+                            p.patterns[pattern.id].notes = notes;
+                          })
+                        }
+                        onSwingChange={(swing) =>
+                          update("Set swing", (p) => {
+                            p.patterns[pattern.id].swing = swing;
+                          })
+                        }
+                        onAudition={audition}
+                        clipStart={patternId ? null : (clip?.startTick ?? null)}
+                      />
+                    ) : (
+                      <PianoRoll
+                        pattern={pattern}
+                        selectedIds={selectedNoteIds}
+                        onSelect={selectNotes}
+                        onChange={(notes, label) =>
+                          update(label, (p) => {
+                            p.patterns[pattern.id].notes = notes;
+                          })
+                        }
+                        onAudition={audition}
+                        musicalKey={project.key}
+                        clipStart={patternId ? null : (clip?.startTick ?? null)}
+                      />
+                    )
+                  ) : clip?.type === "audio" ? (
+                    <div className="audio-clip-editor">
+                      <AudioLines size={48} />
+                      <div>
+                        <h3>{clip.name}</h3>
+                        <p>
+                          {project.assets
+                            .find((a) => a.id === clip.assetId)
+                            ?.duration.toFixed(2)}{" "}
+                          seconds · Original speed
+                        </p>
+                        <p>
+                          Move or resize this clip in the arrangement. Adjust
+                          trimming, looping, and gain in the inspector.
+                        </p>
+                        <button
+                          className="button small"
+                          onClick={() => setInspector(true)}
+                        >
+                          <SlidersHorizontal />
+                          Open clip settings
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <Music2 size={24} />
+                      <h3>Every song starts somewhere.</h3>
+                      <p>
+                        Add an instrument, then click the grid to write your
+                        first notes.
+                      </p>
+                      <button
+                        className="button"
+                        onClick={() => setPanel("add-track")}
+                      >
+                        <Plus />
+                        Add an instrument
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <Music2 size={24} />
-                    <h3>Every song starts somewhere.</h3>
-                    <p>
-                      Add an instrument, then click the grid to write your first
-                      notes.
-                    </p>
-                    <button
-                      className="button"
-                      onClick={() => setPanel("add-track")}
-                    >
-                      <Plus />
-                      Add an instrument
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-            {keyboard && (
-              <Keyboard
-                onAudition={(pitch) => audition(pitch)}
-                musicalKey={project.key}
-              />
-            )}
-          </section>
-          <footer className="workspace-footer">
-            <span>
-              <span className={`audio-status ${audioReady ? "ready" : ""}`} />
-              {audioReady
-                ? "Audio engine ready"
-                : "Press play to bring it to life"}
-            </span>
-            <span className="footer-hint">
-              SPACE <span>Play / Pause</span>
-              <i />⌘ Z <span>Undo</span>
-            </span>
-            <div className="master-control">
-              <Headphones size={13} />
-              <span>Master</span>
-              <input
-                aria-label="Master volume"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={project.masterVolume}
-                onChange={(e) =>
-                  update("Set master volume", (p) => {
-                    p.masterVolume = +e.target.value;
-                  })
-                }
-              />
-              <LevelMeter />
-            </div>
-          </footer>
-        </main>
-        {inspector && <Inspector onClose={() => setInspector(false)} />}
+                  )}
+                </>
+              )}
+              {keyboard && (
+                <Keyboard
+                  onAudition={(pitch) => audition(pitch)}
+                  musicalKey={project.key}
+                />
+              )}
+            </section>
+            <footer className="workspace-footer">
+              <span>
+                <span className={`audio-status ${audioReady ? "ready" : ""}`} />
+                {audioReady
+                  ? "Audio engine ready"
+                  : "Press play to bring it to life"}
+              </span>
+              <span className="footer-hint">
+                SPACE <span>Play / Pause</span>
+                <i />⌘ Z <span>Undo</span>
+              </span>
+              <div className="master-control">
+                <Headphones size={13} />
+                <span>Master</span>
+                <input
+                  aria-label="Master volume"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={project.masterVolume}
+                  onChange={(e) =>
+                    update("Set master volume", (p) => {
+                      p.masterVolume = +e.target.value;
+                    })
+                  }
+                />
+                <LevelMeter />
+              </div>
+            </footer>
+          </main>
+        )}
+        {workspace === "studio" && inspector && (
+          <Inspector onClose={() => setInspector(false)} />
+        )}
       </div>
       {panel === "add-track" && (
         <Modal

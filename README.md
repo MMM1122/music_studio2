@@ -12,6 +12,12 @@ A working browser music studio for composing original R&B, neo-soul, electronic 
 
 ![STUDIO in Gallery Light](docs/screenshots/studio-light.png)
 
+## Mathematical Music Lab
+
+Open **Math Lab** from the sidebar to turn functions into editable melodies, shape an eight-harmonic Fourier synthesizer, and build melodies with genuine Dirichlet–Categorical feedback. **Add to Studio** creates normal editable tracks; saved harmonic sounds also appear in the Inspector. Works locally with no API keys, in Gallery Light and Dark.
+
+Read the [Math Lab guide](docs/MATH_LAB.md) for controls, mathematical models, persistence, implementation files, and limitations.
+
 ## Run locally
 
 Use Node.js 22.12+ and npm 10+.

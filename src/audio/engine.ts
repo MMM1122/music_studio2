@@ -1,3 +1,4 @@
+import { harmonicLevels } from "../math/fourier";
 import * as Tone from "tone";
 import {
   BAR,
@@ -41,6 +42,16 @@ function presetInstrument(type: InstrumentType): Instrument {
  * Tone's transport supplies audio-clock timestamps; React only reads the playhead.
  * Native synthesis and effects are shared by realtime and offline rendering. */
 export class StudioAudioEngine {
+  private labPending = new Map<number, symbol>();
+  private labVoices = new Map<
+    number,
+    {
+      sources: OscillatorNode[];
+      amounts: GainNode[];
+      envelope: GainNode;
+      release: number;
+    }
+  >();
   private context: AudioContext | null = null;
   private transport: ReturnType<typeof Tone.getTransport> | null = null;
   private bus: MixBus | null = null;
@@ -90,6 +101,7 @@ export class StudioAudioEngine {
   }
 
   async play(project: Project, startTick?: number): Promise<void> {
+    this.stopLabNotes();
     const command = ++this.commandSerial;
     await this.init();
     if (command !== this.commandSerial || !this.transport || !this.context)
@@ -124,6 +136,7 @@ export class StudioAudioEngine {
   }
 
   stop(): void {
+    this.stopLabNotes();
     ++this.commandSerial;
     this.playing = false;
     this.position = 0;
@@ -199,6 +212,109 @@ export class StudioAudioEngine {
     return Math.min(1, Math.sqrt(sum / this.meterData.length));
   }
 
+  /** Eight phase-aligned sine partials let held notes respond to harmonic sliders
+   * with gain glides. Sequenced notes use the equivalent PeriodicWave in graph.ts. */
+  async labNoteOn(
+    instrument: Instrument,
+    pitch: number,
+    volume: number,
+  ): Promise<void> {
+    this.labNoteOff(pitch);
+    const request = Symbol();
+    this.labPending.set(pitch, request);
+    this.pause();
+    this.stopPreview();
+    await this.init();
+    if (this.labPending.get(pitch) !== request || !this.context || !this.bus)
+      return;
+    this.labPending.delete(pitch);
+    const c = this.context,
+      now = c.currentTime + 0.005;
+    const envelope = c.createGain();
+    envelope.gain.value = 0;
+    // Same context and master metering; isolated from the session's reverb sends.
+    envelope.connect(this.bus.input);
+    envelope.gain.setValueAtTime(0, now);
+    envelope.gain.linearRampToValueAtTime(
+      Math.max(0, Math.min(1, volume)) * 0.3,
+      now + Math.max(0.008, instrument.attack),
+    );
+    const levels = harmonicLevels(
+      instrument.harmonics ?? [1, 0, 0, 0, 0, 0, 0, 0],
+    );
+    const sources: OscillatorNode[] = [],
+      amounts: GainNode[] = [];
+    for (let i = 0; i < 8; i++) {
+      const oscillator = c.createOscillator(),
+        amount = c.createGain();
+      const frequency = 440 * 2 ** ((pitch - 69) / 12) * (i + 1);
+      oscillator.frequency.value = Math.min(frequency, c.sampleRate * 0.45);
+      amount.gain.value = frequency < c.sampleRate * 0.45 ? levels[i] : 0;
+      oscillator.connect(amount);
+      amount.connect(envelope);
+      sources.push(oscillator);
+      amounts.push(amount);
+      oscillator.start(now);
+      oscillator.stop(now + 30);
+    }
+    const entry = { sources, amounts, envelope, release: instrument.release };
+    this.labVoices.set(pitch, entry);
+    sources[0].onended = () => {
+      sources.forEach((s) => s.disconnect());
+      amounts.forEach((g) => g.disconnect());
+      envelope.disconnect();
+      if (this.labVoices.get(pitch) === entry) this.labVoices.delete(pitch);
+    };
+  }
+  labNoteOff(pitch: number): void {
+    this.labPending.delete(pitch);
+    const entry = this.labVoices.get(pitch);
+    if (!entry || !this.context) return;
+    this.labVoices.delete(pitch);
+    const now = this.context.currentTime,
+      release = Math.min(1.5, Math.max(0.02, entry.release));
+    const gain = entry.envelope.gain;
+    if (typeof gain.cancelAndHoldAtTime === "function")
+      gain.cancelAndHoldAtTime(now);
+    else {
+      const value = gain.value;
+      gain.cancelScheduledValues(now);
+      gain.setValueAtTime(value, now);
+    }
+    gain.linearRampToValueAtTime(0, now + release);
+    entry.sources.forEach((s) => {
+      try {
+        s.stop(now + release + 0.02);
+      } catch {
+        /* already stopped */
+      }
+    });
+  }
+  stopLabNotes(): void {
+    this.labPending.clear();
+    for (const [pitch, entry] of this.labVoices) {
+      entry.release = 0.025;
+      this.labNoteOff(pitch);
+    }
+  }
+  updateLabSound(instrument: Instrument, volume: number): void {
+    if (!this.context) return;
+    const now = this.context.currentTime,
+      levels = harmonicLevels(instrument.harmonics ?? [1, 0, 0, 0, 0, 0, 0, 0]);
+    for (const entry of this.labVoices.values()) {
+      entry.release = instrument.release;
+      entry.amounts.forEach((g, i) =>
+        g.gain.setTargetAtTime(levels[i], now, 0.018),
+      );
+      entry.envelope.gain.cancelScheduledValues(now);
+      entry.envelope.gain.setTargetAtTime(
+        Math.max(0, Math.min(1, volume)) * 0.3,
+        now,
+        0.018,
+      );
+    }
+  }
+
   async audition(track: Track, pitch: number, velocity = 0.8): Promise<void> {
     await this.init();
     if (!this.context || !this.bus) return;
@@ -232,6 +348,7 @@ export class StudioAudioEngine {
     pattern: Pattern,
     instrument?: Instrument | InstrumentType,
   ): Promise<void> {
+    this.stopLabNotes();
     this.pause();
     this.stopPreview();
     const command = this.previewSerial;

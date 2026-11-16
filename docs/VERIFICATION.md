@@ -1,6 +1,16 @@
 # Verification and current limits
 
-## Version 1.2 checks
+## Version 1.3 checks — Mathematical Music Lab
+
+- **61 unit tests passed** across 6 files. The 13 added checks cover safe expression parsing and adversarial inputs, normalization, scale/MIDI mapping, meaningful function controls, Dirichlet probability normalization, accepted evidence and context isolation, separate rejection/exploration effects, deterministic non-training generation, bounded Fourier waveforms, Studio insertion/application, and persistence recovery.
+- **Strict TypeScript and production build passed.** No lint script exists in this repository.
+- **18 browser tests are covered:** the 13 existing Studio checks plus 5 Math Lab checks. The full 17-test suite passed before the final pending-activation regression was added; the final 5-test Math Lab suite then passed, including preserving manual edits on BPM changes and stopping a voice before async activation finishes. GitHub CI runs all 18 together on the published commit.
+- Browser checks verify invalid expression errors, changed musical output, edited notes/settings after reload, real loop preview and stop, playable track insertion, live harmonic slider changes, note-on/off, silence after stopping or leaving a tab, named sound persistence and application to existing notes, real accept/reject count changes, generated 16-note melodies, and both themes.
+- Actual offline Fourier audio was analysed at 440 Hz and 880 Hz. The pure first harmonic had approximately 7,206,718 units of coherent energy at 440 Hz versus 0.059 at 880 Hz; the pure second harmonic reversed that relationship (approximately 7,206,711 at 880 Hz versus 0.234 at 440 Hz). All-zero harmonics produced **exactly zero RMS**. These are measurements of rendered PCM, not only the SVG display.
+- Gallery Light, Dark, and 1280px laptop screenshots were inspected. The laptop viewport had no document-level horizontal overflow; long sequence rows scroll within their editor.
+- Verification used Chrome automation and signal analysis, not human listening. Safari/Firefox, mobile multi-touch and long-session stress remain unverified. Detailed model rules, file map, use and scope are in [MATH_LAB.md](MATH_LAB.md).
+
+## Version 1.2 checks (previous release)
 
 Run locally with Node 22 and headless Google Chrome on macOS. Tests are included for reproduction.
 

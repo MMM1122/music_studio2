@@ -1,3 +1,4 @@
+import { harmonicLevels } from "../math/fourier";
 import type { Track, Instrument } from "../domain/models";
 
 export interface Voice {
@@ -377,6 +378,7 @@ function shape(
 
 /** Per-instrument level trims so presets sit at similar loudness before the fader. */
 const LEVEL: Record<Instrument["type"], number> = {
+  fourier: 0.55,
   "electric-piano": 0.2,
   "felt-piano": 0.26,
   "synth-bass": 0.24,
@@ -473,6 +475,31 @@ export function synthesize(
   };
 
   switch (instrument.type) {
+    case "fourier": {
+      const oscillator = c.createOscillator();
+      const real = new Float32Array(9),
+        imag = new Float32Array(9);
+      harmonicLevels(instrument.harmonics ?? [1, 0, 0, 0, 0, 0, 0, 0]).forEach(
+        (v, i) => {
+          imag[i + 1] = frequency * (i + 1) < nyquist ? v : 0;
+        },
+      );
+      oscillator.setPeriodicWave(
+        c.createPeriodicWave(real, imag, { disableNormalization: true }),
+      );
+      oscillator.frequency.value = frequency;
+      oscillator.connect(amp);
+      sources.push(oscillator);
+      nodes.push(oscillator);
+      tail = shape(amp.gain, start, end, {
+        peak,
+        attack,
+        decay: 0.3,
+        sustain: 0.72,
+        release,
+      });
+      break;
+    }
     case "electric-piano": {
       // Two-operator FM, the way a tine piano is usually modelled: the modulation index starts
       // high and falls quickly, so hard notes bark and then mellow into a round sustain.

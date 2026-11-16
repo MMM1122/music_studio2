@@ -7,7 +7,9 @@ import {
   type InstrumentType,
 } from "../domain/models";
 import { useProjectStore } from "../stores/projectStore";
+import { useMathLabStore } from "../stores/mathLabStore";
 export function Inspector({ onClose }: { onClose: () => void }) {
+  const savedPresets = useMathLabStore((state) => state.savedPresets);
   const { project, selectedTrackId, selectedClipId, update, selectClip } =
     useProjectStore();
   const track = project.tracks.find((t) => t.id === selectedTrackId);
@@ -71,7 +73,12 @@ export function Inspector({ onClose }: { onClose: () => void }) {
                   value={track.instrument.type}
                   onChange={(e) =>
                     change("Change instrument", (t) => {
-                      t.instrument.type = e.target.value as InstrumentType;
+                      const preset = savedPresets.find(
+                        (p) => `saved:${p.id}` === e.target.value,
+                      );
+                      if (preset)
+                        t.instrument = structuredClone(preset.instrument);
+                      else t.instrument.type = e.target.value as InstrumentType;
                     })
                   }
                 >
@@ -84,10 +91,22 @@ export function Inspector({ onClose }: { onClose: () => void }) {
                       {i.name}
                     </option>
                   ))}
+                  {track.type === "midi" && savedPresets.length > 0 && (
+                    <optgroup label="Your Math Lab sounds">
+                      {savedPresets.map((preset) => (
+                        <option key={preset.id} value={`saved:${preset.id}`}>
+                          {preset.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </label>
               <div className="preset-note">
-                Built-in synthesis <span>●</span> Ready
+                {track.instrument.type === "fourier"
+                  ? track.instrument.presetName || "Custom harmonics"
+                  : "Built-in synthesis"}{" "}
+                <span>●</span> Ready
               </div>
             </>
           )}
