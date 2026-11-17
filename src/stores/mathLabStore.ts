@@ -21,6 +21,8 @@ export interface LabData {
   tab: "functions" | "fourier" | "bayesian";
   functionSettings: FunctionSettings;
   functionPattern: Pattern;
+  functionCurve: number[] | null;
+  flowStep: number;
   sound: "keys" | "fourier";
   fourier: Instrument;
   fourierVolume: number;
@@ -77,6 +79,8 @@ const dataSchema = z.object({
     density: z.boolean(),
   }),
   functionPattern: labPattern,
+  functionCurve: z.array(unit).length(16).nullable().default(null),
+  flowStep: z.number().int().min(1).max(3).default(1),
   sound: z.enum(["keys", "fourier"]),
   fourier: fourierSchema,
   fourierVolume: unit,
@@ -98,7 +102,7 @@ const dataSchema = z.object({
         rejected: z.array(z.number().int().min(0).max(1000000)).min(5).max(7),
       }),
     )
-    .refine((m) => Object.keys(m).length <= 1000),
+    .refine((m) => Object.keys(m).length <= 2048),
   bayesPattern: labPattern,
   bayesLength: z.union([z.literal(8), z.literal(16), z.literal(32)]),
   bayesBpm: z.number().min(30).max(300),
@@ -111,6 +115,8 @@ function defaults(): LabData {
     workspace: "studio",
     tab: "functions",
     functionSettings: { ...DEFAULT_FUNCTION_SETTINGS },
+    functionCurve: null,
+    flowStep: 1,
     functionPattern: generateFunction(DEFAULT_FUNCTION_SETTINGS).pattern,
     sound: "keys",
     fourier: makeFourierInstrument(

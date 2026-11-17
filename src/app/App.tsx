@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   Play,
   Pause,
@@ -79,7 +87,14 @@ import { Ideas } from "../components/Ideas";
 import { LevelMeter, PositionReadout } from "../components/TransportReadouts";
 import { SessionArtwork } from "../components/SessionArtwork";
 
-import { MathLab } from "../components/MathLab";
+const MathLab = lazy(() =>
+  import("../components/MathLab").then((module) => ({
+    default: module.MathLab,
+  })),
+);
+import { ProjectBackup } from "../components/ProjectBackup";
+import { StorageProtection } from "../components/StorageProtection";
+import { MidiFiles } from "../components/MidiFiles";
 import { useMathLabStore } from "../stores/mathLabStore";
 import { insertLabPattern, applyLabInstrument } from "../math/studio";
 
@@ -109,7 +124,23 @@ export function App() {
     redo,
     canUndo,
     canRedo,
-  } = useProjectStore();
+  } = useProjectStore(
+    useShallow((state) => ({
+      project: state.project,
+      selectedTrackId: state.selectedTrackId,
+      selectedClipId: state.selectedClipId,
+      selectedNoteIds: state.selectedNoteIds,
+      selectTrack: state.selectTrack,
+      selectClip: state.selectClip,
+      selectNotes: state.selectNotes,
+      update: state.update,
+      load: state.load,
+      undo: state.undo,
+      redo: state.redo,
+      canUndo: state.canUndo,
+      canRedo: state.canRedo,
+    })),
+  );
   const [theme, setTheme] = useState(() =>
     readPreference("theme") === "dark" ? "dark" : "light",
   );
@@ -734,16 +765,26 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.3</div>
+            <div className="version-label">STUDIO / V.1.4</div>
           </div>
         </nav>
         {workspace === "math" ? (
-          <MathLab
-            onAdd={addFromLab}
-            onApplyInstrument={applyFromLab}
-            onStudio={() => changeWorkspace("studio")}
-            notify={notify}
-          />
+          <Suspense
+            fallback={
+              <main className="workspace">
+                <div className="empty-state" role="status">
+                  Opening the creative lab…
+                </div>
+              </main>
+            }
+          >
+            <MathLab
+              onAdd={addFromLab}
+              onApplyInstrument={applyFromLab}
+              onStudio={() => changeWorkspace("studio")}
+              notify={notify}
+            />
+          </Suspense>
         ) : (
           <main className="workspace">
             <div className="workspace-heading">
@@ -765,8 +806,15 @@ export function App() {
                     <span>·</span>
                     {Math.round(duration)} sec
                   </div>
-                  <button onClick={() => setPanel("ideas")}>
-                    Find inspiration <ArrowUpRight size={13} />
+                  <button
+                    onClick={() => {
+                      useMathLabStore
+                        .getState()
+                        .patch({ tab: "functions", flowStep: 1 });
+                      changeWorkspace("math");
+                    }}
+                  >
+                    Make a first phrase <ArrowUpRight size={13} />
                   </button>
                 </div>
               </div>
@@ -1251,6 +1299,12 @@ export function App() {
               }}
             />
           </div>
+          <ProjectBackup
+            project={project}
+            onOpen={openProject}
+            notify={notify}
+          />
+          <MidiFiles project={project} onOpen={openProject} notify={notify} />
           <p className="library-footnote">
             Project JSON includes notes and settings. Imported audio files
             remain in this browser and are not embedded in JSON backups.
@@ -1264,6 +1318,7 @@ export function App() {
           onClose={closePanel}
         >
           <div className="settings-content">
+            <StorageProtection />
             <h4>Appearance</h4>
             <div className="theme-options">
               <button

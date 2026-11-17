@@ -1,6 +1,14 @@
 # Verification and current limits
 
-## Version 1.3 checks — Mathematical Music Lab
+## Version 1.4 checks — Creative flow
+
+- **79 unit tests passed** across 9 files, including curve mapping, complete-backup checksum/inventory validation and atomic rollback, plus MIDI timing, running status, sustain/all-notes-off behavior, empty-track channel accounting, the 128-track/conductor boundary, loops, swing, clip gates and malformed-file rejection.
+- **22 Chrome browser tests passed** in one full local run. New checks exercise actual pointer dragging, changed notes during a continuous live loop, measured visualization movement/silence, the three-step Fourier/probability route, cancellation during audio activation, Studio transport restoration, complete audio-backed restoration into a fresh browser context, and MIDI download/reimport.
+- **Strict TypeScript and production build passed.** Production-browser checks confirm that Math Lab is requested on entering the workspace and Tone only after an audio gesture, with no page errors. Initial JavaScript is approximately **492 kB / 155 kB gzip**, down from the previous single **718 kB / 211 kB gzip** bundle. The deferred Tone runtime is **229 kB / 59 kB gzip**, and the Math Lab UI is **29 kB / 10 kB gzip**. Total code grew with the new functionality; these are first-load savings, not a claim about download speed on every connection.
+- The original demo still renders **46.651179 seconds**, RMS **0.15980**, peak **0.94583**; this release does not claim a new mix or subjective sound-quality improvement.
+- Light/dark screenshots and the 1280px layout were checked. Validation used Chrome and actual PCM/clock/analyser data, not human listening. Safari/Firefox, hardware inputs and mobile multi-touch remain unverified. No ESLint configuration was added.
+
+## Version 1.3 checks — Mathematical Music Lab (previous release)
 
 - **61 unit tests passed** across 6 files. The 13 added checks cover safe expression parsing and adversarial inputs, normalization, scale/MIDI mapping, meaningful function controls, Dirichlet probability normalization, accepted evidence and context isolation, separate rejection/exploration effects, deterministic non-training generation, bounded Fourier waveforms, Studio insertion/application, and persistence recovery.
 - **Strict TypeScript and production build passed.** No lint script exists in this repository.
@@ -34,14 +42,14 @@ The complete demo rendered as stereo **44,100 Hz PCM16 WAV**, lasting **46.65117
 ## Deliberate MVP limits
 
 - 4/4 time signature only; fixed tempo per project.
-- No microphone recording, MIDI input/recording, MIDI-file import/export, automation lanes, plugin hosting, or MP3 export.
+- No microphone recording, MIDI input/recording, automation lanes, plugin hosting, or MP3 export.
 - Audio samples play at original speed; no pitch-shifting or time-stretching. Sample trim is start-offset plus clip gate; no destructive waveform editor.
-- Structural edits during playback reschedule with a short safety gap. Independent pattern preview is a rendered snapshot; restart it after editing.
+- Arrangement edits and Math Lab live-preview edits replace future events without stopping the clock. Notes already sounding finish naturally; the audio scheduler looks ahead by 60 ms. Studio editor/Ideas previews remain rendered snapshots; restart those after editing.
 - Synthesized instruments are lightweight and usable but do not claim to emulate a sampled commercial instrument library.
 - Sample library contains six original one-shots/textures, plus user imports; there is no large commercial loop catalog.
 - Chord detection works bar by bar and names one chord per bar. Two chords in a bar, or a bass playing something other than the root, will be read as the nearest single chord.
 - The open hi-hat is closed by the next hat only in browsers that implement `AudioParam.cancelAndHoldAtTime` (Chrome, Edge, Safari). Elsewhere it rings for its full length.
 - Local inspiration is music-theory generation; the LLM provider contract exists, but no external AI service is connected.
-- JSON backups omit audio bytes. Browser storage can be cleared by the user/browser; retain source audio and export backups.
+- JSON backups omit audio bytes; complete `.studio` backups include them (256 MB maximum), but exclude unapplied Math Lab drafts and learned preferences. Browser persistence is best-effort and cannot protect against the user clearing site data.
 - Export has a fixed two-second tail and a ten-minute duration limit.
 - Track movement uses up/down controls. Clip dragging is horizontal within its track; copy/paste supports compatible destination tracks.

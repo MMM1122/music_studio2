@@ -1,11 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { engine } from "./audio/engine";
 import { App } from "./app/App";
 import "./themes/tokens.css";
 import "./themes/app.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary onError={() => engine.stop()}>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 // Read-only development hooks let browser tests inspect the same live store as React.
@@ -26,6 +30,8 @@ if (import.meta.env.DEV) {
         previewing: engine.isPreviewing(),
         playing: engine.isPlaying(),
         tick: engine.getTick(),
+        previewTick: engine.getPreviewTick(),
+        live: engine.isLivePreviewing(),
       }),
       hasAsset: (id: string) => engine.hasAsset(id),
     },

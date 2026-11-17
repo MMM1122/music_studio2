@@ -22,7 +22,6 @@ import {
   SCALE_INTERVALS,
   midiToFrequency,
   type FunctionSettings,
-  type LabScale,
 } from "../math/functions";
 import {
   FOURIER_PRESETS,
@@ -38,14 +37,18 @@ import {
   contextKey,
   type BayesContext,
 } from "../math/bayesian";
+import {
+  Slider,
+  KeyScale,
+  Graph,
+  Sequence,
+  ROOTS,
+} from "./math/MathLabControls";
+import { CurveEditor } from "./math/CurveEditor";
+import { curvePattern } from "../math/curve";
+import { SessionArtwork } from "./SessionArtwork";
 import "../themes/math-lab.css";
 
-const ROOTS = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
-const SCALES: { value: LabScale; label: string }[] = [
-  { value: "major", label: "Major" },
-  { value: "minor", label: "Natural Minor" },
-  { value: "pentatonic", label: "Minor Pentatonic" },
-];
 const FUNCTION_PRESETS = [
   { name: "Sine / a gentle arc", value: "sin(x)" },
   { name: "Two voices", value: "sin(2*x) + 0.5*cos(5*x)" },
@@ -124,28 +127,113 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
       ? lab.fourier
       : createTrack("electric-piano").instrument;
   const updateFunction = (values: Partial<FunctionSettings>) => {
-    stop();
     const settings = { ...lab.functionSettings, ...values };
     let pattern = lab.functionPattern;
+    let functionCurve = lab.functionCurve;
     try {
-      if (Object.keys(values).length !== 1 || values.bpm === undefined)
-        pattern = generateFunction(settings).pattern;
+      if (Object.keys(values).length !== 1 || values.bpm === undefined) {
+        const changesShape = [
+          "expression",
+          "amplitude",
+          "frequency",
+          "offset",
+        ].some((key) => key in values);
+        if (functionCurve && !changesShape)
+          pattern = curvePattern(settings, functionCurve);
+        else {
+          pattern = generateFunction(settings).pattern;
+          functionCurve = null;
+        }
+      }
     } catch {
-      /* keep edits until input is valid; playback disabled */
+      stop();
     }
-    patch({ functionSettings: settings, functionPattern: pattern });
+    patch({
+      functionSettings: settings,
+      functionPattern: pattern,
+      functionCurve,
+    });
   };
+  const curvePoints =
+    lab.functionCurve ?? evaluated.result?.normalized ?? Array(16).fill(0.5);
+  function updateCurve(points: number[]) {
+    patch({
+      functionCurve: points,
+      functionPattern: curvePattern(lab.functionSettings, points),
+    });
+  }
+  useEffect(() => {
+    if (engine.isLivePreviewing())
+      engine.updateLivePreview(
+        lab.tab === "bayesian" ? lab.bayesPattern : lab.functionPattern,
+        lab.sound === "fourier"
+          ? lab.fourier
+          : createTrack("electric-piano").instrument,
+        lab.tab === "bayesian" ? lab.bayesBpm : lab.functionSettings.bpm,
+      );
+  }, [
+    lab.functionPattern,
+    lab.bayesPattern,
+    lab.functionSettings.bpm,
+    lab.bayesBpm,
+    lab.sound,
+    lab.fourier,
+    lab.tab,
+  ]);
+  function continueCurve() {
+    stop();
+    const pattern = structuredClone(lab.functionPattern);
+    pattern.name = "Curve + probability";
+    pattern.notes = pattern.notes.filter((note) => note.startTick < 1920);
+    pattern.lengthTicks = 3840;
+    const settings = lab.functionSettings,
+      intervals = SCALE_INTERVALS[settings.scale],
+      last = pattern.notes.at(-1)?.pitch ?? 60 + settings.root;
+    const previous = Math.max(
+      0,
+      intervals.indexOf((last - settings.root + 120) % 12),
+    );
+    patch({
+      bayesPattern: pattern,
+      bayesLength: 16,
+      bayesBpm: settings.bpm,
+      bayesContext: {
+        root: settings.root,
+        scale: settings.scale,
+        chord: 0,
+        previous,
+      },
+      tab: "bayesian",
+    });
+    setEvidence(
+      "Your curve supplies the first bar. Accept suggestions to write an ending. No evidence was added automatically.",
+    );
+  }
   async function preview(pattern: Pattern, bpm: number) {
     stop();
     const serial = ++request.current;
     setBusy(true);
     try {
-      await engine.previewPattern(
+      await engine.previewLivePattern(
         { ...project, transport: { ...project.transport, bpm } },
         pattern,
         sound,
       );
-      if (serial === request.current) refreshTransport();
+      if (serial === request.current) {
+        const latest = useMathLabStore.getState();
+        engine.updateLivePreview(
+          latest.tab === "bayesian"
+            ? latest.bayesPattern
+            : latest.functionPattern,
+          latest.sound === "fourier"
+            ? latest.fourier
+            : createTrack("electric-piano").instrument,
+          latest.tab === "bayesian"
+            ? latest.bayesBpm
+            : latest.functionSettings.bpm,
+        );
+        refreshTransport();
+      }
     } catch (e) {
       notify(e instanceof Error ? e.message : "Audio could not start.");
     } finally {
@@ -190,10 +278,12 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
     );
     if (accepted) {
       const pattern = structuredClone(lab.bayesPattern);
-      if (pattern.notes.length < lab.bayesLength)
-        pattern.notes.push(
-          createNote(pitch, pattern.notes.length * 240, 210, 0.75),
-        );
+      const nextTick = pattern.notes.reduce(
+        (end, note) => Math.max(end, note.startTick + 240),
+        0,
+      );
+      if (nextTick < lab.bayesLength * 240)
+        pattern.notes.push(createNote(pitch, nextTick, 210, 0.75));
       patch({
         bayesModel: model,
         bayesPattern: pattern,
@@ -227,7 +317,6 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
           aria-label="Melody sound"
           value={lab.sound}
           onChange={(e) => {
-            stop();
             patch({ sound: e.target.value as "keys" | "fourier" });
           }}
         >
@@ -264,6 +353,7 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
             in probability.
           </p>
         </div>
+        <SessionArtwork large />
         <button
           className="button small"
           onClick={() => {
@@ -301,6 +391,46 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
           </button>
         ))}
       </div>
+      <nav className="lab-first-phrase" aria-label="Create your first phrase">
+        {[
+          {
+            title: "Shape a curve",
+            description: "Drag the notes into a contour",
+            tab: "functions",
+          },
+          {
+            title: "Choose a sound",
+            description: "Shape eight real harmonics",
+            tab: "fourier",
+          },
+          {
+            title: "Preview & add",
+            description: "Bring your phrase into Studio",
+            tab: "functions",
+          },
+        ].map((step, index) => (
+          <button
+            key={step.title}
+            aria-current={lab.flowStep === index + 1 ? "step" : undefined}
+            onClick={() => {
+              changeTab(step.tab as typeof lab.tab);
+              patch({ flowStep: index + 1 });
+              if (index === 2)
+                requestAnimationFrame(() =>
+                  document
+                    .querySelector(".lab-sequence")
+                    ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+                );
+            }}
+          >
+            <span>{index + 1}</span>
+            <div>
+              <strong>{step.title}</strong>
+              <small>{step.description}</small>
+            </div>
+          </button>
+        ))}
+      </nav>
       {lab.storageError && (
         <p className="lab-error" role="alert">
           {lab.storageError}
@@ -319,7 +449,24 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
                 <span className="eyebrow">01 / FUNCTION COMPOSER</span>
                 <h2>A curve becomes a phrase.</h2>
               </div>
-              <span className="lab-badge">16 steps · 2 bars</span>
+              <div className="lab-actions">
+                <button
+                  className="button"
+                  disabled={!!evaluated.error || busy}
+                  onClick={() =>
+                    previewing
+                      ? stop()
+                      : void preview(
+                          lab.functionPattern,
+                          lab.functionSettings.bpm,
+                        )
+                  }
+                >
+                  {previewing ? <Square size={13} /> : <Play size={13} />}{" "}
+                  {previewing ? "Stop shaping" : "Listen while shaping"}
+                </button>
+                <span className="lab-badge">16 steps · 2 bars</span>
+              </div>
             </div>
             <div className="lab-composer-grid">
               <section className="lab-card lab-controls">
@@ -395,18 +542,27 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
               </section>
               <section className="lab-card lab-graph-card">
                 <div className="lab-card-heading">
-                  <span>FUNCTION STUDY</span>
-                  <span>x ∈ [0, 2π]</span>
+                  <span>FUNCTION → PITCH CURVE</span>
+                  <span>0–1 normalized · 16 samples</span>
                 </div>
-                <Graph
-                  values={evaluated.result?.plot.map((p) => p.y) ?? []}
-                  label="Function plot"
+                <CurveEditor
+                  points={curvePoints}
+                  onChange={updateCurve}
+                  onGesture={() => {
+                    if (!previewing && !busy && !evaluated.error)
+                      void preview(
+                        lab.functionPattern,
+                        lab.functionSettings.bpm,
+                      );
+                  }}
                 />
-                <div className="lab-graph-caption">
-                  <span>0</span>
-                  <span>π</span>
-                  <span>2π</span>
-                </div>
+                <p className="lab-hint">
+                  Drag a point or use ↑ ↓ to change its pitch. Playback follows
+                  the next notes without restarting.{" "}
+                  {lab.functionCurve
+                    ? "Custom piecewise-linear curve."
+                    : "Normalized samples from your function."}
+                </p>
                 {evaluated.error ? (
                   <p className="lab-error" role="alert">
                     {evaluated.error}
@@ -518,10 +674,18 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
                 )}
                 steps={16}
                 onChange={(functionPattern) => {
-                  stop();
                   patch({ functionPattern });
                 }}
               />
+              <button
+                className="button small"
+                onClick={continueCurve}
+                disabled={
+                  !!evaluated.error || !lab.functionPattern.notes.length
+                }
+              >
+                Continue this curve with probability <ArrowUpRight size={13} />
+              </button>
               {playback(
                 lab.functionPattern,
                 lab.functionSettings.bpm,
@@ -720,6 +884,20 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
                 hold Space or Enter. Voices stop on focus loss.
               </p>
               <div className="lab-save-row">
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    stop();
+                    patch({ sound: "fourier", tab: "functions", flowStep: 3 });
+                  }}
+                >
+                  Use this sound for my curve <ArrowUpRight size={13} />
+                </button>
+                <p className="lab-hint">
+                  Your curve keeps its notes and now uses this sound.
+                </p>
+              </div>
+              <div className="lab-save-row">
                 <label>
                   Preset name
                   <input
@@ -801,7 +979,9 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
           <>
             <div className="lab-section-title">
               <div>
-                <span className="eyebrow">03 / BAYESIAN MELODY COMPOSER</span>
+                <span className="eyebrow">
+                  03 / INTERACTIVE PROBABILITY COMPOSER
+                </span>
                 <h2>Let the next note learn.</h2>
               </div>
               <span className="lab-badge">Dirichlet–Categorical</span>
@@ -1088,188 +1268,5 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
         </footer>
       </div>
     </main>
-  );
-}
-function Slider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="lab-slider">
-      <span>
-        {label}
-        <output>{value.toFixed(2)}</output>
-      </span>
-      <input
-        aria-label={label}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(+e.target.value)}
-      />
-    </label>
-  );
-}
-function KeyScale({
-  root,
-  scale,
-  onChange,
-}: {
-  root: number;
-  scale: LabScale;
-  onChange: (v: { root?: number; scale?: LabScale }) => void;
-}) {
-  return (
-    <>
-      <label>
-        Key
-        <select
-          aria-label="Lab key"
-          value={root}
-          onChange={(e) => onChange({ root: +e.target.value })}
-        >
-          {ROOTS.map((r, i) => (
-            <option key={r} value={i}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Scale
-        <select
-          aria-label="Lab scale"
-          value={scale}
-          onChange={(e) => onChange({ scale: e.target.value as LabScale })}
-        >
-          {SCALES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    </>
-  );
-}
-function Graph({
-  values,
-  label,
-  fixed = false,
-}: {
-  values: number[];
-  label: string;
-  fixed?: boolean;
-}) {
-  const low = fixed ? -1 : Math.min(-0.1, ...values),
-    high = fixed ? 1 : Math.max(0.1, ...values),
-    range = high - low || 1;
-  const path = values
-    .map(
-      (y, i) =>
-        `${i ? "L" : "M"}${((i / Math.max(1, values.length - 1)) * 640).toFixed(2)},${(180 - ((y - low) / range) * 160).toFixed(2)}`,
-    )
-    .join(" ");
-  return (
-    <svg
-      className="lab-graph"
-      viewBox="0 0 640 200"
-      role="img"
-      aria-label={label}
-      preserveAspectRatio="none"
-    >
-      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <line key={"x" + i} x1={i * 80} x2={i * 80} y1={0} y2={200} />
-      ))}
-      {[20, 60, 100, 140, 180].map((y) => (
-        <line key={y} x1={0} x2={640} y1={y} y2={y} />
-      ))}
-      <path
-        className="lab-axis"
-        d={`M0,${180 - ((0 - low) / range) * 160}H640`}
-      />
-      <path className="lab-curve" d={path} />
-    </svg>
-  );
-}
-function Sequence({
-  pattern,
-  pitches,
-  steps,
-  onChange,
-}: {
-  pattern: Pattern;
-  pitches: number[];
-  steps: number;
-  onChange: (p: Pattern) => void;
-}) {
-  return (
-    <div
-      className="lab-sequence"
-      style={{ gridTemplateColumns: `repeat(${steps}, minmax(46px,1fr))` }}
-    >
-      {Array.from({ length: steps }, (_, i) => {
-        const note = pattern.notes.find(
-          (n) => Math.floor(n.startTick / 240) === i,
-        );
-        const choices = [
-          ...new Set([...pitches, ...(note ? [note.pitch] : [])]),
-        ].sort((a, b) => a - b);
-        return (
-          <label className="lab-step" key={i}>
-            <span>{String(i + 1).padStart(2, "0")}</span>
-            <div className="lab-note-glyph">
-              <i
-                style={{
-                  bottom: `${note ? 10 + (Math.max(0, choices.indexOf(note.pitch)) / Math.max(1, choices.length - 1)) * 65 : 5}%`,
-                  opacity: note ? note.velocity : 0,
-                }}
-              />
-            </div>
-            <select
-              aria-label={`Step ${i + 1} note`}
-              value={note?.pitch ?? "rest"}
-              onChange={(e) => {
-                const next = structuredClone(pattern);
-                next.notes = next.notes.filter(
-                  (n) => Math.floor(n.startTick / 240) !== i,
-                );
-                if (e.target.value !== "rest")
-                  next.notes.push(
-                    createNote(
-                      +e.target.value,
-                      i * 240,
-                      210,
-                      note?.velocity ?? 0.72,
-                    ),
-                  );
-                next.notes.sort((a, b) => a.startTick - b.startTick);
-                onChange(next);
-              }}
-            >
-              <option value="rest">Rest</option>
-              {choices.map((p) => (
-                <option key={p} value={p}>
-                  {noteName(p)}
-                </option>
-              ))}
-            </select>
-          </label>
-        );
-      })}
-    </div>
   );
 }

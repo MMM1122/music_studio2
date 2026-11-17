@@ -1,5 +1,15 @@
 # STUDIO release notes
 
+## Version 1.4 — Shape, hear, compose
+
+- Drag a 16-point musical curve and hear upcoming notes change while the audio-clock loop keeps its position. Keyboard-accessible points support Up/Down, Home and End.
+- Replaced the decorative session SVG with measured waveform/frequency-energy line artwork, including a quiet state, reduced-motion behavior and hidden/offscreen throttling.
+- Added a three-step first-phrase route and direct links from a curve to its Fourier sound and a probability-composed ending. Bayesian remains an interactive, locally learned preference model.
+- Added complete `.studio` backups with original audio bytes, SHA-256 verification, fresh restore IDs and atomic IndexedDB writes; storage-persistence controls and a recovery error boundary.
+- Added bounded MIDI format 0/1 file import and type-1 export, with explicit limitations and omission notices.
+- Lazy-loaded Math Lab and Tone's runtime; narrowed project-store subscriptions and extracted shared Math Lab controls.
+- Kept the existing project schema and browser origin. Existing sessions are preserved. Recording, hardware MIDI input, parameter automation and new sample libraries are future work.
+
 ## Version 1.3 — Mathematical Music Lab
 
 - Added integrated Functions, Fourier and Bayesian workspaces with light/dark styling, actual audio preview, editable sequences and direct Studio insertion.

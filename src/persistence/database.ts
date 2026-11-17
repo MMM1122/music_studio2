@@ -90,6 +90,49 @@ export async function saveProject(project: Project): Promise<void> {
     store.put(validated);
   });
 }
+/** Atomically create an imported project and all its assets. add(), not put(),
+ * makes accidental ID collisions abort the entire transaction without overwrites. */
+export async function saveProjectBundle(
+  project: Project,
+  assets: Map<string, Blob>,
+): Promise<void> {
+  const validated = validateProject(structuredClone(project));
+  const expected = new Set(validated.assets.map((asset) => asset.id));
+  if (
+    assets.size !== expected.size ||
+    [...assets].some(
+      ([id, blob]) =>
+        !expected.has(id) || !(blob instanceof Blob) || !blob.size,
+    )
+  )
+    throw new Error(
+      "The complete project is missing audio data. Nothing was saved.",
+    );
+  const entries = [...assets];
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(["projects", "assets"], "readwrite");
+    tx.oncomplete = () => resolve();
+    tx.onabort = () =>
+      reject(
+        new Error(
+          `Import was not saved: ${tx.error?.name === "QuotaExceededError" ? "device storage is full" : tx.error?.name === "ConstraintError" ? "a project or audio ID already exists" : "storage transaction failed"}. Existing projects are unchanged.`,
+        ),
+      );
+    try {
+      tx.objectStore("projects").add(validated);
+      for (const [id, blob] of entries) tx.objectStore("assets").add(blob, id);
+    } catch (error) {
+      tx.abort();
+      reject(
+        error instanceof Error
+          ? error
+          : new Error("Could not save the complete project."),
+      );
+    }
+  });
+}
+
 export async function loadProject(id: string): Promise<Project | undefined> {
   const value = await read<unknown>("projects", (store) => store.get(id));
   return value === undefined ? undefined : validateProject(value);

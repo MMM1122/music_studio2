@@ -5,6 +5,8 @@ export default defineConfig({
   // such as https://<user>.github.io/<repo>/ without further configuration.
   base: "./",
   plugins: [react()],
+  // Pre-bundle the lazy audio dependency before browser tests start rendering.
+  optimizeDeps: { include: ["tone"] },
   test: { include: ["src/**/*.test.ts"], environment: "node" },
   build: { chunkSizeWarningLimit: 800 },
 });

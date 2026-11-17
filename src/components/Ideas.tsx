@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { useEffect, useState } from "react";
 import { Sparkles, Play, Plus, RefreshCw, Square } from "lucide-react";
 import {
@@ -10,20 +11,30 @@ import { useProjectStore } from "../stores/projectStore";
 import { engine } from "../audio/engine";
 import { BAR, uid } from "../domain/models";
 export function Ideas({ onMessage }: { onMessage: (s: string) => void }) {
-  const { project, selectedClipId, update, selectClip } = useProjectStore();
+  const { musicalKey, bpm, update, selectClip } = useProjectStore(
+    useShallow((state) => ({
+      musicalKey: state.project.key,
+      bpm: state.project.transport.bpm,
+      update: state.update,
+      selectClip: state.selectClip,
+    })),
+  );
   const [category, setCategory] = useState<SuggestionCategory>("bassline");
   const [seed, setSeed] = useState(1);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
-  const clip = project.tracks
-    .flatMap((t) => t.clips)
-    .find((c) => c.id === selectedClipId);
-  const pattern =
-    clip?.type === "midi" ? project.patterns[clip.patternId] : undefined;
   useEffect(() => () => engine.stopPreview(), []);
   const generate = () => {
     engine.stopPreview();
     setPreview(null);
+    // Read the latest notes only when generating. Selection/history changes do not
+    // need to re-render an already displayed set of suggestions.
+    const { project, selectedClipId } = useProjectStore.getState();
+    const clip = project.tracks
+      .flatMap((t) => t.clips)
+      .find((c) => c.id === selectedClipId);
+    const pattern =
+      clip?.type === "midi" ? project.patterns[clip.patternId] : undefined;
     // Ideas are written for the bar under the playhead, where "Use idea" will place them.
     setSuggestions(
       generateSuggestions(project, category, seed, pattern, engine.getTick()),
@@ -59,9 +70,8 @@ export function Ideas({ onMessage }: { onMessage: (s: string) => void }) {
           <em>Entirely your sound.</em>
         </h3>
         <p>
-          Explore musical possibilities in {project.key} at{" "}
-          {project.transport.bpm} BPM. Keep what moves you, change everything
-          else.
+          Explore musical possibilities in {musicalKey} at {bpm} BPM. Keep what
+          moves you, change everything else.
         </p>
       </div>
       <div className="idea-controls">
@@ -104,7 +114,11 @@ export function Ideas({ onMessage }: { onMessage: (s: string) => void }) {
                   setPreview(null);
                 } else
                   void engine
-                    .previewPattern(project, s.pattern, s.instrument)
+                    .previewPattern(
+                      useProjectStore.getState().project,
+                      s.pattern,
+                      s.instrument,
+                    )
                     .then(() => setPreview(s.id))
                     .catch((e) => onMessage(String(e)));
               }}

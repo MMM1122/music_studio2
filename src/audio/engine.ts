@@ -1,5 +1,6 @@
 import { harmonicLevels } from "../math/fourier";
-import * as Tone from "tone";
+import type * as Tone from "tone";
+let toneModule: Promise<typeof import("./toneRuntime")> | undefined;
 import {
   BAR,
   INSTRUMENTS,
@@ -64,6 +65,9 @@ export class StudioAudioEngine {
   private previewGraph: TrackGraph | null = null;
   private previewSource: AudioBufferSourceNode | null = null;
   private previewSerial = 0;
+  private livePreview = false;
+  private livePreviewIds: number[] = [];
+  private liveInstrument: Instrument | null = null;
   private previewStart = 0;
   private previewBpm = 90;
   private previewLength = BAR;
@@ -83,6 +87,7 @@ export class StudioAudioEngine {
     if (typeof window === "undefined")
       throw new Error("Audio is available in a browser.");
     // This call is reached from a user gesture (Play, audition, preview, or export).
+    const Tone = await (toneModule ??= import("./toneRuntime"));
     await Tone.start();
     if (this.context) return;
     this.context = Tone.getContext().rawContext as AudioContext;
@@ -90,7 +95,7 @@ export class StudioAudioEngine {
     this.transport = Tone.getTransport();
     this.transport.PPQ = PPQ;
     this.analyser = this.context.createAnalyser();
-    this.analyser.fftSize = 256;
+    this.analyser.fftSize = 1024;
     this.analyser.connect(this.context.destination);
     this.bus = new MixBus(
       this.context,
@@ -172,6 +177,12 @@ export class StudioAudioEngine {
     if (prior && prior.id !== project.id) this.stop();
     this.project = project;
     if (!this.context || !this.transport) return;
+    // The Studio toolbar may still be edited while a Lab loop owns the clock.
+    // Retain those edits, but apply Studio events/tempo only when Studio plays.
+    if (this.livePreview) {
+      this.bus?.update(project.masterVolume, this.previewBpm);
+      return;
+    }
     this.syncGraphs(project);
     this.configureTransport(project);
     if (this.schedulingSignature(project) !== this.structure)
@@ -210,6 +221,104 @@ export class StudioAudioEngine {
     let sum = 0;
     for (const sample of this.meterData) sum += sample * sample;
     return Math.min(1, Math.sqrt(sum / this.meterData.length));
+  }
+
+  /** Copies measured output into caller-owned buffers. Does not initialize audio. */
+  readAnalysis(
+    wave: Float32Array<ArrayBuffer>,
+    spectrum: Uint8Array<ArrayBuffer>,
+  ): boolean {
+    if (!this.analyser || this.context?.state !== "running") {
+      wave.fill(0);
+      spectrum.fill(0);
+      return false;
+    }
+    this.analyser.getFloatTimeDomainData(wave);
+    this.analyser.getByteFrequencyData(spectrum);
+    return true;
+  }
+
+  /** Live Math Lab loop: the existing audio-clock transport schedules notes. Edits
+   * replace future events without pausing or resetting the loop's position. */
+  async previewLivePattern(
+    project: Project,
+    pattern: Pattern,
+    instrument: Instrument,
+  ): Promise<void> {
+    this.stopLabNotes();
+    this.pause();
+    this.stopPreview();
+    const serial = this.previewSerial;
+    await this.init();
+    if (
+      serial !== this.previewSerial ||
+      !this.context ||
+      !this.transport ||
+      !this.bus
+    )
+      return;
+    this.clearSchedules();
+    this.structure = "";
+    this.transportConfig = "";
+    this.transport.stop(this.context.currentTime);
+    const track: Track = {
+      id: "live-lab",
+      name: "Live Lab",
+      type: "midi",
+      color: "sage",
+      instrument,
+      mixer: { volume: 0.8, pan: 0, mute: false, solo: false },
+      effects: { reverb: 0.08, delay: 0, filter: 16000 },
+      clips: [],
+    };
+    this.bus.update(project.masterVolume, project.transport.bpm);
+    this.previewGraph = new TrackGraph(this.context, this.bus, track, true);
+    this.livePreview = true;
+    this.updateLivePreview(pattern, instrument, project.transport.bpm);
+    this.transport.start(this.context.currentTime + 0.08, "0i");
+  }
+  isLivePreviewing(): boolean {
+    return this.livePreview;
+  }
+  updateLivePreview(
+    pattern: Pattern,
+    instrument: Instrument,
+    bpm: number,
+  ): void {
+    if (!this.livePreview || !this.transport || !this.context) return;
+    this.livePreviewIds.forEach((id) => this.transport?.clear(id));
+    this.livePreviewIds = [];
+    this.previewLength = pattern.lengthTicks;
+    this.previewBpm = bpm;
+    this.liveInstrument = instrument;
+    this.transport.bpm.value = bpm;
+    this.transport.loop = true;
+    this.transport.loopStart = "0i";
+    this.transport.loopEnd = `${pattern.lengthTicks}i`;
+    for (const note of pattern.notes)
+      this.livePreviewIds.push(
+        this.transport.schedule((time) => {
+          if (
+            !this.livePreview ||
+            !this.context ||
+            !this.previewGraph ||
+            !this.liveInstrument
+          )
+            return;
+          const voice = synthesize(
+            this.context,
+            this.previewGraph.input,
+            this.liveInstrument,
+            note.pitch,
+            note.velocity,
+            Math.max(time, this.context.currentTime),
+            ticksToSeconds(note.durationTicks, this.previewBpm),
+            1,
+            (ended) => this.previewVoices.delete(ended),
+          );
+          this.previewVoices.add(voice);
+        }, `${note.startTick}i`),
+      );
   }
 
   /** Eight phase-aligned sine partials let held notes respond to harmonic sliders
@@ -433,9 +542,18 @@ export class StudioAudioEngine {
   }
 
   isPreviewing(): boolean {
-    return this.previewSource !== null || this.previewVoices.size > 0;
+    return (
+      this.livePreview ||
+      this.previewSource !== null ||
+      this.previewVoices.size > 0
+    );
   }
   getPreviewTick(): number {
+    if (this.livePreview && this.transport && this.context)
+      return (
+        Math.max(0, this.transport.getTicksAtTime(this.context.currentTime)) %
+        this.previewLength
+      );
     return this.previewSource && this.context
       ? Math.max(
           0,
@@ -448,6 +566,14 @@ export class StudioAudioEngine {
   }
   stopPreview(): void {
     ++this.previewSerial;
+    if (this.livePreview) {
+      this.livePreview = false;
+      this.transport?.stop(this.context?.currentTime);
+      this.transportConfig = "";
+    }
+    this.livePreviewIds.forEach((id) => this.transport?.clear(id));
+    this.livePreviewIds = [];
+    this.liveInstrument = null;
     if (this.previewSource) {
       try {
         this.previewSource.stop();

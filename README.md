@@ -1,6 +1,6 @@
 # STUDIO
 
-**A quiet space to create your own sound.**
+**A creative playground where mathematics becomes music.**
 
 **[Open STUDIO — Live Website →](https://studio-music-yvette.yvettewu2017.chatgpt.site)**
 
@@ -15,6 +15,16 @@ A working browser music studio for composing original R&B, neo-soul, electronic 
 ## Mathematical Music Lab
 
 Open **Math Lab** from the sidebar to turn functions into editable melodies, shape an eight-harmonic Fourier synthesizer, and build melodies with genuine Dirichlet–Categorical feedback. **Add to Studio** creates normal editable tracks; saved harmonic sounds also appear in the Inspector. Works locally with no API keys, in Gallery Light and Dark.
+
+### Your first phrase in three steps
+
+1. **Shape a curve** — drag one of the 16 points. Your first drag starts a real audio loop; edits change upcoming notes without resetting the playhead.
+2. **Choose a sound** — adjust Fourier harmonics, then choose **Use this sound for my curve**.
+3. **Preview & add** — listen and choose **Add to Studio** to keep composing on the timeline.
+
+The line artwork now reads the actual master output's waveform and frequency energy. It becomes still when the audio is silent. **Continue this curve with probability** carries the opening into the interactive probability composer; your accepted suggestions supply its evidence.
+
+![Editable musical curve](docs/screenshots/creative-curve-light.png)
 
 Read the [Math Lab guide](docs/MATH_LAB.md) for controls, mathematical models, persistence, implementation files, and limitations.
 
@@ -56,7 +66,11 @@ Browser tests use installed Google Chrome locally and bundled Playwright Chromiu
 
 Project changes autosave after 700 ms to IndexedDB. **Save** writes immediately. Wait for **All changes saved** before closing the page. **Projects** lists sessions, opens them, creates new ones, and deletes sessions with a confirmation. Reloading restores the last session and its imported audio from the same browser/origin.
 
-Use **Download project JSON** for a portable notes/settings backup. JSON backups reference imported audio but **do not embed its bytes**; keep copies of your imported audio. Clearing browser data, changing browser profiles, or moving to another website origin will not transfer your local sessions. Export a WAV and a JSON backup before clearing browser storage.
+Use **Projects → Export complete project** to download one `.studio` file with notes, settings, track instruments and imported audio (up to 256 MB). **Import complete project** validates the audio checksums and restores a separate session, including on another browser. Unapplied Math Lab drafts, learned preferences and unused sound presets are browser preferences, so add a phrase/sound to Studio before backing it up.
+
+**Download project JSON** remains available for notes/settings only. **Settings → Protect local storage** requests browser persistence; the browser may decline it. Clearing site data yourself still deletes local projects, so retain downloaded complete backups.
+
+**Projects → Import MIDI / Export MIDI** exchanges note arrangements with other music tools. Supports Standard MIDI formats 0/1 with PPQN timing, sustain-note durations, drum channels and one tempo. Import reports omitted tempo changes/controllers; export uses audible note tracks and clip timing. MIDI does not carry recorded audio or custom Fourier sounds.
 
 ## Export audio
 
@@ -87,7 +101,7 @@ The application works without external AI. `src/ai/provider.ts` defines a provid
 
 ## Architecture and verification
 
-- [What changed in 1.1, with measurements](docs/CHANGES.md)
+- [Release history, with measurements](docs/CHANGES.md)
 - [Architecture and musical rules](docs/ARCHITECTURE.md)
 - [Verified behavior and limitations](docs/VERIFICATION.md)
 - [Original sample provenance](public/samples/README.md)

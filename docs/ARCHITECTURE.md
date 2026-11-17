@@ -27,7 +27,7 @@ Arrangement movement snaps to a quarter-note beat; piano editing supports quarte
 
 Mute overrides solo. If any track is soloed, only unmuted soloed tracks reach the output. Audio plays at its original sample rate/speed; a trim offset selects where the sample begins, and looping repeats the remaining trimmed segment. Audio duration is represented musically, so changing BPM changes the clip's timeline gate, not the pitch or playback rate of its source.
 
-Independent pattern preview renders a dry pattern into an AudioBuffer, then loops it with a native AudioBufferSourceNode through a reusable preview effects graph. Preview pauses the arrangement and preserves its resume position. Editing a previewed pattern requires restarting preview to hear the new version; arrangement edits reschedule automatically.
+Independent pattern preview renders a dry pattern into an AudioBuffer, then loops it with a native AudioBufferSourceNode through a reusable preview effects graph. Preview pauses the arrangement and preserves its resume position. Studio editor/Ideas snapshot previews require restarting after edits. Math Lab uses a live transport-scheduled preview: it clears/replaces future note events without pausing, keeps its own loop settings, and restores Studio transport configuration on return. Arrangement edits also reschedule automatically.
 
 Edits during playback replace only the plan for the future. Events live on Tone's transport timeline in ticks, so clearing and re-adding them while the transport runs cannot fire an event twice: the transport only fires what it has not yet passed. Notes already sounding finish naturally, tempo changes apply to the running transport, and mix/effect changes glide in place. The transport is restarted only by Play, Stop, Seek, or opening another project. Stopping fades voices over a few milliseconds rather than cutting them. Theme switching touches no audio state.
 
@@ -35,7 +35,7 @@ Edits during playback replace only the plan for the future. Events live on Tone'
 
 Schema version 1 supports 4/4. Version mismatches and malformed notes/references are rejected with a visible error; there is no speculative migration. Project writes resolve after IndexedDB transactions complete. Storage quota or blocked-database errors leave the open project available. Missing audio is reported when reopening; exports refuse to silently omit missing audible assets.
 
-Assets remain local to the browser's origin/profile. JSON backup contains metadata/references but no binary assets. A future ZIP project bundle should combine the project schema and referenced audio for truly portable sessions.
+Assets remain local to the browser's origin/profile. JSON backup contains metadata/references but no binary assets. Complete `.studio` bundles include validated project metadata and unmodified audio bytes with SHA-256 checksums. Import checks every asset before an atomic add-only transaction and uses fresh project/asset IDs. Browser storage persistence is an explicit user request; the render error boundary offers recovery downloads.
 
 ## Export and resource bounds
 
@@ -43,10 +43,14 @@ OfflineAudioContext uses the same instruments/effects as playback. The arrangeme
 
 ## Further development
 
-1. Add portable project bundles and explicit unused-asset cleanup.
+1. Add explicit unused-asset cleanup and a migration registry when a real schema transition is introduced.
 2. Add MIDI input/recording and pointer-held audition envelopes.
 3. Have the interface call `domain/commands.ts` for clip and drum-step edits; those functions are tested but several components still carry their own equivalent logic.
 4. Extend timing to other signatures and add tempo automation.
 5. Add waveform-region selection, sample time-stretch, and audio fades.
 6. Add virtualization for very large piano rolls and arrangement track lists.
 7. Add real LLM providers only behind a server boundary, with schema validation and user acceptance preserved.
+
+## Loading and UI subscriptions
+
+Math Lab is a React lazy workspace. Tone is imported at audio activation; reading meters does not initialize it. App, Arrangement, Inspector, Ideas and SampleBrowser select their needed store state; this avoids unrelated store notifications but does not promise unchanged track identity across deep-cloned project edits. The audio graph and common models remain shared.

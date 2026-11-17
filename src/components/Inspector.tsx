@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { X, SlidersHorizontal, Trash2, Copy, Link2 } from "lucide-react";
 import {
   INSTRUMENTS,
@@ -10,10 +11,37 @@ import { useProjectStore } from "../stores/projectStore";
 import { useMathLabStore } from "../stores/mathLabStore";
 export function Inspector({ onClose }: { onClose: () => void }) {
   const savedPresets = useMathLabStore((state) => state.savedPresets);
-  const { project, selectedTrackId, selectedClipId, update, selectClip } =
-    useProjectStore();
-  const track = project.tracks.find((t) => t.id === selectedTrackId);
-  const clip = track?.clips.find((c) => c.id === selectedClipId);
+  const {
+    track,
+    trackIndex,
+    clip,
+    clipAssetDuration,
+    selectedTrackId,
+    selectedClipId,
+    update,
+    selectClip,
+  } = useProjectStore(
+    useShallow((state) => {
+      const trackIndex = state.project.tracks.findIndex(
+        (t) => t.id === state.selectedTrackId,
+      );
+      const track = state.project.tracks[trackIndex];
+      const clip = track?.clips.find((c) => c.id === state.selectedClipId);
+      return {
+        track,
+        trackIndex,
+        clip,
+        clipAssetDuration:
+          clip?.type === "audio"
+            ? state.project.assets.find((a) => a.id === clip.assetId)?.duration
+            : undefined,
+        selectedTrackId: state.selectedTrackId,
+        selectedClipId: state.selectedClipId,
+        update: state.update,
+        selectClip: state.selectClip,
+      };
+    }),
+  );
   const change = (label: string, fn: (track: Track) => void) =>
     update(
       label,
@@ -51,7 +79,7 @@ export function Inspector({ onClose }: { onClose: () => void }) {
           <div className="inspector-heading">
             <span className="track-swatch" />
             <span className="tiny muted">
-              TRACK {String(project.tracks.indexOf(track) + 1).padStart(2, "0")}
+              TRACK {String(trackIndex + 1).padStart(2, "0")}
             </span>
           </div>
           <input
@@ -335,8 +363,7 @@ export function Inspector({ onClose }: { onClose: () => void }) {
                       clipChange(
                         "offsetSeconds",
                         Math.min(
-                          (project.assets.find((a) => a.id === clip.assetId)
-                            ?.duration ?? 1) - 0.01,
+                          (clipAssetDuration ?? 1) - 0.01,
                           Math.max(0, +e.target.value),
                         ),
                       )
@@ -353,7 +380,9 @@ export function Inspector({ onClose }: { onClose: () => void }) {
                     className="button small"
                     onClick={() => {
                       const pattern = structuredClone(
-                        project.patterns[clip.patternId],
+                        useProjectStore.getState().project.patterns[
+                          clip.patternId
+                        ],
                       );
                       pattern.id = uid();
                       pattern.name += " copy";

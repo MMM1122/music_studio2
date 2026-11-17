@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { useRef, useState } from "react";
 import {
   Plus,
@@ -36,13 +37,30 @@ export function Arrangement({
   onInspector,
 }: Props) {
   const {
-    project,
+    tracks,
+    patterns,
+    loopStart,
+    loopEnd,
+    loop,
     selectedTrackId,
     selectedClipId,
     selectClip,
     selectTrack,
     update,
-  } = useProjectStore();
+  } = useProjectStore(
+    useShallow((state) => ({
+      tracks: state.project.tracks,
+      patterns: state.project.patterns,
+      loopStart: state.project.transport.loopStart,
+      loopEnd: state.project.transport.loopEnd,
+      loop: state.project.transport.loop,
+      selectedTrackId: state.selectedTrackId,
+      selectedClipId: state.selectedClipId,
+      selectClip: state.selectClip,
+      selectTrack: state.selectTrack,
+      update: state.update,
+    })),
+  );
   const [barWidth, setBarWidth] = useState(66);
   const [drag, setDrag] = useState<{
     id: string;
@@ -54,8 +72,8 @@ export function Arrangement({
     16,
     Math.ceil(
       Math.max(
-        project.transport.loopEnd,
-        ...project.tracks.flatMap((t) =>
+        loopEnd,
+        ...tracks.flatMap((t) =>
           t.clips.map((c) => c.startTick + c.durationTicks),
         ),
         BAR * 16,
@@ -147,14 +165,14 @@ export function Arrangement({
     onOpenEditor();
   }
   function duplicate() {
-    const t = project.tracks.find((t) => t.id === selectedTrackId);
+    const t = tracks.find((t) => t.id === selectedTrackId);
     const c = t?.clips.find((c) => c.id === selectedClipId);
     if (!t || !c) return;
     const copy = { ...c, id: uid(), startTick: c.startTick + c.durationTicks };
     editTrack(t.id, (t) => t.clips.push(copy), "Duplicate clip");
     selectClip(t.id, copy.id);
   }
-  const selectedClip = project.tracks
+  const selectedClip = tracks
     .flatMap((t) => t.clips)
     .find((c) => c.id === selectedClipId);
   return (
@@ -162,7 +180,7 @@ export function Arrangement({
       <div className="section-toolbar">
         <div className="section-title">
           <span className="section-index">01</span> Arrangement{" "}
-          <span className="tag">{project.tracks.length} tracks</span>
+          <span className="tag">{tracks.length} tracks</span>
         </div>
         <div className="toolbar-actions">
           <button
@@ -247,11 +265,9 @@ export function Arrangement({
               <div
                 className="loop-region"
                 style={{
-                  left: project.transport.loopStart * pp,
-                  width:
-                    (project.transport.loopEnd - project.transport.loopStart) *
-                    pp,
-                  opacity: project.transport.loop ? 1 : 0.35,
+                  left: loopStart * pp,
+                  width: (loopEnd - loopStart) * pp,
+                  opacity: loop ? 1 : 0.35,
                 }}
               >
                 <span>LOOP</span>
@@ -267,7 +283,7 @@ export function Arrangement({
               ))}
             </div>
           </div>
-          {project.tracks.map((track, idx) => (
+          {tracks.map((track, idx) => (
             <div
               className={`track-row ${track.id === selectedTrackId ? "selected" : ""} ${track.mixer.mute ? "muted-track" : ""}`}
               key={track.id}
@@ -354,7 +370,7 @@ export function Arrangement({
                     </button>
                     <button
                       title={`Move ${track.name} down`}
-                      disabled={idx === project.tracks.length - 1}
+                      disabled={idx === tracks.length - 1}
                       onClick={(e) => {
                         e.stopPropagation();
                         update("Reorder track", (p) => {
@@ -415,7 +431,7 @@ export function Arrangement({
                         <span>{clip.name}</span>
                         <span>{clip.loop ? "↻" : ""}</span>
                       </div>
-                      <ClipMiniature clip={clip} project={project} />
+                      <ClipMiniature clip={clip} patterns={patterns} />
                       <div
                         className="clip-resize"
                         title="Drag to resize clip"
@@ -443,7 +459,7 @@ export function Arrangement({
         <span>
           {Math.ceil(
             Math.max(
-              ...project.tracks.flatMap((t) =>
+              ...tracks.flatMap((t) =>
                 t.clips.map((c) => c.startTick + c.durationTicks),
               ),
               BAR,
@@ -455,7 +471,13 @@ export function Arrangement({
     </section>
   );
 }
-function ClipMiniature({ clip, project }: { clip: Clip; project: Project }) {
+function ClipMiniature({
+  clip,
+  patterns,
+}: {
+  clip: Clip;
+  patterns: Project["patterns"];
+}) {
   if (clip.type === "audio") {
     const peaks = engine.getWaveform(clip.assetId);
     return (
@@ -477,7 +499,7 @@ function ClipMiniature({ clip, project }: { clip: Clip; project: Project }) {
       </svg>
     );
   }
-  const p = project.patterns[clip.patternId];
+  const p = patterns[clip.patternId];
   if (!p) return null;
   const pitches = p.notes.map((n) => n.pitch);
   const min = Math.min(...pitches, 48),

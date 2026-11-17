@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { useEffect, useRef, useState } from "react";
 import { Search, Upload, Play, Square, Plus, AudioLines } from "lucide-react";
 import { type AudioAsset, type AudioClip, uid } from "../domain/models";
@@ -61,7 +62,13 @@ export function SampleBrowser({
 }: {
   onMessage: (s: string) => void;
 }) {
-  const { project, selectedTrackId, update, selectClip } = useProjectStore();
+  const { projectAssets, update, selectClip } = useProjectStore(
+    useShallow((state) => ({
+      projectAssets: state.project.assets,
+      update: state.update,
+      selectClip: state.selectClip,
+    })),
+  );
   const [query, setQuery] = useState(""),
     [category, setCategory] = useState("All"),
     [preview, setPreview] = useState<string | null>(null),
@@ -115,6 +122,8 @@ export function SampleBrowser({
       const blob = source ?? (await blobFor(asset));
       await saveAsset(asset.id, blob);
       await engine.loadAsset(asset.id, await blob.arrayBuffer());
+      // Decoding can take time: use the current selection and tempo at insertion.
+      const { project, selectedTrackId } = useProjectStore.getState();
       const selected = project.tracks.find(
         (t) => t.id === selectedTrackId && t.type === "audio",
       );
@@ -176,7 +185,7 @@ export function SampleBrowser({
   }
   const assets = [
     ...STARTERS,
-    ...project.assets.filter((a) => !STARTERS.some((s) => s.id === a.id)),
+    ...projectAssets.filter((a) => !STARTERS.some((s) => s.id === a.id)),
   ].filter(
     (a) =>
       a.name.toLowerCase().includes(query.toLowerCase()) &&
