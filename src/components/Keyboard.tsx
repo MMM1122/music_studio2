@@ -1,146 +1,157 @@
-import { useState } from "react";
-import type { KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DRUMS } from "../domain/models";
+import { TYPING_DRUMS, TYPING_KEYS } from "../domain/recording";
 import { noteName } from "../domain/theory";
+import { pressNote, releaseNote, shiftOctave } from "../input/performance";
+import { usePerformanceStore } from "../stores/performanceStore";
 import "../themes/editors.css";
 
 export interface KeyboardProps {
-  onAudition: (pitch: number) => void;
   octaves?: number;
   /** Spells key names for the song's key (E♭ rather than D♯ in C minor). */
   musicalKey?: string;
+  /** Show the drum kit as pads instead of piano keys. */
+  drums?: boolean;
 }
-const letters = [
-  "a",
-  "w",
-  "s",
-  "e",
-  "d",
-  "f",
-  "t",
-  "g",
-  "y",
-  "h",
-  "u",
-  "j",
-  "k",
-  "o",
-  "l",
-  "p",
-];
-export function Keyboard({
-  onAudition,
-  octaves = 2,
-  musicalKey,
-}: KeyboardProps) {
+const keyLetter = (code: string | undefined) =>
+  code === "Semicolon" ? ";" : (code?.replace("Key", "") ?? "");
+const BLACK = [1, 3, 6, 8, 10];
+
+/** On-screen keys. Notes sound for as long as a key is held and are recorded like any other
+ * input; the computer keyboard and MIDI keyboards light the same keys. */
+export function Keyboard({ octaves = 2, musicalKey, drums }: KeyboardProps) {
+  const octave = usePerformanceStore((state) => state.octave);
+  const held = usePerformanceStore((state) => state.held);
+  const typing = usePerformanceStore((state) => state.typing);
   const noteLabel = (pitch: number) => noteName(pitch, musicalKey);
-  const [octave, setOctave] = useState(3);
-  const [active, setActive] = useState<number | null>(null);
   const start = (octave + 1) * 12;
   const notes = Array.from(
     { length: Math.max(1, Math.min(3, octaves)) * 12 + 1 },
     (_, i) => start + i,
   );
-  const white = notes.filter((p) => ![1, 3, 6, 8, 10].includes(p % 12));
+  const white = notes.filter((p) => !BLACK.includes(p % 12));
   const whiteWidth = 100 / white.length;
-  function press(pitch: number) {
-    setActive(pitch);
-    onAudition(pitch);
-  }
-  function keyboard(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
-    const index = letters.indexOf(event.key.toLowerCase());
-    if (index >= 0) {
-      event.preventDefault();
-      event.stopPropagation();
-      press(start + index);
-    }
-  }
+  /** Pointer and keyboard handlers shared by every key and pad. */
+  const play = (pitch: number) => ({
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
+      // Capture keeps the release coming to this key even if the pointer slides off it.
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      pressNote(pitch);
+    },
+    onPointerUp: () => releaseNote(pitch),
+    onPointerCancel: () => releaseNote(pitch),
+    onLostPointerCapture: () => releaseNote(pitch),
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+        event.preventDefault();
+        event.stopPropagation();
+        pressNote(pitch);
+      }
+    },
+    onKeyUp: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        releaseNote(pitch);
+      }
+    },
+    onBlur: () => releaseNote(pitch),
+  });
+  const hint = (pitch: number) =>
+    typing ? keyLetter(TYPING_KEYS[pitch - start]) : "";
   return (
     <div
       className="keyboard"
-      tabIndex={0}
-      aria-label="Virtual piano keyboard. Use A W S E D F T G Y H U J K to play."
-      onKeyDown={keyboard}
-      onKeyUp={() => setActive(null)}
-      onBlur={() => setActive(null)}
+      aria-label={
+        drums
+          ? "Drum pads. Keys A S D F G H play the kit."
+          : "Virtual piano keyboard. Keys A to L play notes; Z and X change octave."
+      }
     >
       <div className="keyboard-octave">
-        <span className="editor-tool-label">OCTAVE</span>
-        <div>
-          <button
-            aria-label="Lower keyboard octave"
-            disabled={octave <= 1}
-            onClick={() => setOctave((o) => o - 1)}
-          >
-            <ChevronLeft size={13} />
-          </button>
-          <span>C{octave}</span>
-          <button
-            aria-label="Higher keyboard octave"
-            disabled={octave >= 6}
-            onClick={() => setOctave((o) => o + 1)}
-          >
-            <ChevronRight size={13} />
-          </button>
-        </div>
-        <small>Click or use A–K</small>
+        <span className="editor-tool-label">{drums ? "KIT" : "OCTAVE"}</span>
+        {!drums && (
+          <div>
+            <button
+              aria-label="Lower keyboard octave"
+              disabled={octave <= 1}
+              onClick={() => shiftOctave(-1)}
+            >
+              <ChevronLeft size={13} />
+            </button>
+            <span>C{octave}</span>
+            <button
+              aria-label="Higher keyboard octave"
+              disabled={octave >= 6}
+              onClick={() => shiftOctave(1)}
+            >
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        )}
+        <small>
+          {typing
+            ? drums
+              ? "Hold a pad, or A–H"
+              : "Hold a key, or A–L"
+            : "Hold a key to play"}
+        </small>
       </div>
-      <div
-        className="keyboard-keys"
-        onPointerLeave={() => setActive(null)}
-        onPointerUp={() => setActive(null)}
-      >
-        {white.map((pitch, i) => (
-          <button
-            key={pitch}
-            type="button"
-            className={`virtual-white ${active === pitch ? "is-active" : ""}`}
-            style={{ left: `${i * whiteWidth}%`, width: `${whiteWidth}%` }}
-            onPointerDown={() => press(pitch)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-                press(pitch);
-              }
-            }}
-            title={noteLabel(pitch)}
-            aria-label={`Play ${noteLabel(pitch)}`}
-          >
-            <span>
-              {pitch % 12 === 0
-                ? noteLabel(pitch)
-                : letters[pitch - start]?.toUpperCase()}
-            </span>
-          </button>
-        ))}
-        {notes
-          .filter((p) => [1, 3, 6, 8, 10].includes(p % 12))
-          .map((pitch) => (
+      {drums ? (
+        <div className="keyboard-pads">
+          {DRUMS.map((drum) => {
+            const code = Object.entries(TYPING_DRUMS).find(
+              ([, pitch]) => pitch === drum.pitch,
+            )?.[0];
+            return (
+              <button
+                key={drum.pitch}
+                type="button"
+                className={`drum-pad ${held.includes(drum.pitch) ? "is-active" : ""}`}
+                aria-label={`Play ${drum.name}`}
+                {...play(drum.pitch)}
+              >
+                <span>{drum.name}</span>
+                <small>{typing ? keyLetter(code) : ""}</small>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="keyboard-keys">
+          {white.map((pitch, i) => (
             <button
               key={pitch}
               type="button"
-              className={`virtual-black ${active === pitch ? "is-active" : ""}`}
-              style={{
-                left: `${(white.filter((p) => p < pitch).length - 0.31) * whiteWidth}%`,
-                width: `${whiteWidth * 0.62}%`,
-              }}
-              onPointerDown={() => press(pitch)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  press(pitch);
-                }
-              }}
+              className={`virtual-white ${held.includes(pitch) ? "is-active" : ""}`}
+              style={{ left: `${i * whiteWidth}%`, width: `${whiteWidth}%` }}
               title={noteLabel(pitch)}
               aria-label={`Play ${noteLabel(pitch)}`}
+              {...play(pitch)}
             >
-              <span>{letters[pitch - start]?.toUpperCase()}</span>
+              <span>{pitch % 12 === 0 ? noteLabel(pitch) : hint(pitch)}</span>
             </button>
           ))}
-      </div>
+          {notes
+            .filter((p) => BLACK.includes(p % 12))
+            .map((pitch) => (
+              <button
+                key={pitch}
+                type="button"
+                className={`virtual-black ${held.includes(pitch) ? "is-active" : ""}`}
+                style={{
+                  left: `${(white.filter((p) => p < pitch).length - 0.31) * whiteWidth}%`,
+                  width: `${whiteWidth * 0.62}%`,
+                }}
+                title={noteLabel(pitch)}
+                aria-label={`Play ${noteLabel(pitch)}`}
+                {...play(pitch)}
+              >
+                <span>{hint(pitch)}</span>
+              </button>
+            ))}
+        </div>
+      )}
       <div className="keyboard-caption">
         <span>PLAY SOMETHING</span>
         <small>Every idea starts with a note.</small>

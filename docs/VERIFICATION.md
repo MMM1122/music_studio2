@@ -1,5 +1,12 @@
 # Verification and current limits
 
+## Version 1.6 checks — Play it in, typed tempos
+
+- **102 unit tests passed** across 12 files. New: recording takes (bar-aligned new clips, quantize off, overdub into looping clips, notes on both sides of an existing clip, growing an unshared pattern, reporting notes that cannot be placed, drums, empty/audio/unknown tracks), MIDI message parsing and the typing layout.
+- **37 Chrome browser tests passed** in one full local run. New: typing 120 into BPM over 86 gives 120 (it gave 240 before the fix, reproduced first), arrow keys, clamping on leaving the field, Escape, empty entry, one-step undo and save/reload; digit-by-digit entry for loop end bar and both Math Lab BPM fields; held computer-key notes that sound after 350 ms and fall silent after release; keys ignored in text fields and when switched off; a recorded take quantized to 1/16 and removed by one undo; metronome audible only while on (sampled every frame); a mocked MIDI input playing and releasing notes; per-track meters (drums move, the bass meter stays at zero in bars 1–4, all return to zero after Stop); playing along after importing a reference.
+- **Strict TypeScript and production build passed.**
+- Not verified: real MIDI hardware (only a mocked `requestMIDIAccess` input), recording feel and latency on real devices, Safari/Firefox, and how the metronome or held notes sound. Nobody listened to the output; checks are signal measurements.
+
 ## Version 1.5 checks — Reference Track & Audio Analysis
 
 - **93 unit tests passed** across 11 files. Added coverage includes backward-compatible reference metadata, marker bounds/IDs, reference timing across BPM edits and Undo/Redo, complete-backup metadata, and onset/autocorrelation behavior for synthetic pulse trains, silence, steady tones, short/invalid inputs and work bounds.
@@ -54,7 +61,7 @@ The complete demo rendered as stereo **44,100 Hz PCM16 WAV**, lasting **46.65117
 ## Deliberate MVP limits
 
 - 4/4 time signature only; fixed tempo per project.
-- No microphone recording, MIDI input/recording, automation lanes, plugin hosting, or MP3 export.
+- No microphone/audio recording, automation lanes, plugin hosting, or MP3 export. MIDI and computer-keyboard recording write notes only (no sustain pedal or controller data).
 - Audio samples play at original speed; no pitch-shifting or time-stretching. Sample trim is start-offset plus clip gate; no destructive waveform editor.
 - Arrangement edits and Math Lab live-preview edits replace future events without stopping the clock. Notes already sounding finish naturally; the audio scheduler looks ahead by 60 ms. Studio editor/Ideas previews remain rendered snapshots; restart those after editing.
 - Synthesized instruments are lightweight and usable but do not claim to emulate a sampled commercial instrument library.

@@ -645,3 +645,37 @@
     transition: none;
   }
 }
+
+/* Drum pads shown in place of piano keys when a drum track is selected */
+.keyboard-pads {
+  flex: 1;
+  max-width: 710px;
+  min-width: 300px;
+  height: 80px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  padding-bottom: 8px;
+}
+.drum-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--editor-key-white);
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  touch-action: manipulation;
+}
+.drum-pad small {
+  font-size: 8px;
+  color: var(--editor-key-label);
+}
+.drum-pad:hover,
+.drum-pad.is-active {
+  background: var(--track-color, var(--color-selection));
+  color: var(--color-text-primary);
+}

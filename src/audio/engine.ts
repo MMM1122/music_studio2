@@ -25,6 +25,8 @@ import {
 import { MixBus, TrackGraph, sample, synthesize, type Voice } from "./graph";
 import { encodeWav } from "./wav";
 
+/** Longest a key held on a keyboard keeps sounding before it is released for the player. */
+const LIVE_HOLD_SECONDS = 20;
 export const EXPORT_TAIL_SECONDS = 2;
 export const EXPORT_SAMPLE_RATE = 44100;
 /** Seconds of release rendered past a previewed pattern and folded back onto its start. */
@@ -116,7 +118,13 @@ export class StudioAudioEngine {
   private previewLength = BAR;
   private auditionGraph: TrackGraph | null = null;
   private auditionSignature = "";
+  private auditionTrackId = "";
   private auditionVoices = new Set<Voice>();
+  /** Notes held from a keyboard, keyed by track and pitch, with the release they should use. */
+  private liveVoices = new Map<string, { voice: Voice; release: number }>();
+  private livePending = new Map<string, symbol>();
+  private metronome = false;
+  private metronomeId: number | null = null;
   private project: Project | null = null;
   private events: MusicalEvent[] = [];
   private eventIds: number[] = [];
@@ -146,6 +154,7 @@ export class StudioAudioEngine {
       this.project?.masterVolume ?? 0.8,
       this.project?.transport.bpm ?? 90,
     );
+    this.syncMetronome();
   }
 
   async play(project: Project, startTick?: number): Promise<void> {
@@ -195,6 +204,7 @@ export class StudioAudioEngine {
 
   stop(): void {
     this.stopLabNotes();
+    this.allNotesOff();
     ++this.commandSerial;
     this.playing = false;
     this.position = 0;
@@ -495,9 +505,10 @@ export class StudioAudioEngine {
     }
   }
 
-  async audition(track: Track, pitch: number, velocity = 0.8): Promise<void> {
-    await this.init();
-    if (!this.context || !this.bus) return;
+  /** The strip a played or auditioned note goes through. It copies the track's fader, pan and
+   * effects but ignores mute and solo, so pressing a key always makes a sound. */
+  private stripFor(track: Track): TrackGraph | null {
+    if (!this.context || !this.bus) return null;
     const signature = JSON.stringify([track.id, track.instrument]);
     if (!this.auditionGraph || signature !== this.auditionSignature) {
       this.auditionVoices.forEach((voice) => voice.stop());
@@ -505,11 +516,120 @@ export class StudioAudioEngine {
       this.auditionGraph?.dispose();
       this.auditionGraph = new TrackGraph(this.context, this.bus, track, true);
       this.auditionSignature = signature;
+      this.auditionTrackId = track.id;
     }
     this.auditionGraph.update(track, true);
+    return this.auditionGraph;
+  }
+
+  /** Starts a note that sounds until `noteOff`. Drums are one-shots and need no release.
+   * Safe to call before audio is running: a note released while the context is still
+   * starting never sounds. */
+  async noteOn(track: Track, pitch: number, velocity = 0.8): Promise<void> {
+    const key = `${track.id}:${pitch}`;
+    const request = Symbol();
+    this.livePending.set(key, request);
+    await this.init();
+    if (this.livePending.get(key) !== request) return;
+    this.livePending.delete(key);
+    const strip = this.stripFor(track);
+    if (!this.context || !strip) return;
+    this.liveVoices.get(key)?.voice.release(0.03);
+    const drums = track.instrument.type === "drum-kit";
     const voice = synthesize(
       this.context,
-      this.auditionGraph.input,
+      strip.input,
+      track.instrument,
+      pitch,
+      velocity,
+      this.context.currentTime + 0.003,
+      drums ? 0.4 : LIVE_HOLD_SECONDS,
+      1,
+      (ended) => {
+        if (this.liveVoices.get(key)?.voice === ended)
+          this.liveVoices.delete(key);
+      },
+    );
+    if (!drums)
+      this.liveVoices.set(key, { voice, release: track.instrument.release });
+  }
+  noteOff(trackId: string, pitch: number): void {
+    const key = `${trackId}:${pitch}`;
+    this.livePending.delete(key);
+    const held = this.liveVoices.get(key);
+    if (!held) return;
+    this.liveVoices.delete(key);
+    held.voice.release(held.release);
+  }
+  allNotesOff(): void {
+    this.livePending.clear();
+    for (const held of this.liveVoices.values()) held.voice.release(0.04);
+    this.liveVoices.clear();
+  }
+
+  /** A click on every beat while the transport runs, accented on the bar. Heard live only:
+   * it is not part of the project and never reaches an export. */
+  setMetronome(on: boolean): void {
+    this.metronome = on;
+    this.syncMetronome();
+  }
+  private syncMetronome(): void {
+    if (!this.transport) return;
+    if (this.metronomeId !== null) {
+      this.transport.clear(this.metronomeId);
+      this.metronomeId = null;
+    }
+    if (!this.metronome) return;
+    this.metronomeId = this.transport.scheduleRepeat(
+      (time) => this.click(time),
+      `${PPQ}i`,
+      0,
+    );
+  }
+  private click(time: number): void {
+    if (!this.context || !this.bus || !this.transport) return;
+    const beat = Math.round(this.transport.getTicksAtTime(time) / PPQ);
+    const accent = beat % 4 === 0;
+    const source = this.context.createOscillator();
+    const envelope = this.context.createGain();
+    source.frequency.value = accent ? 1568 : 1046.5;
+    envelope.gain.setValueAtTime(0, time);
+    envelope.gain.linearRampToValueAtTime(accent ? 0.2 : 0.13, time + 0.001);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, time + 0.045);
+    source.connect(envelope);
+    envelope.connect(this.bus.input);
+    source.start(time);
+    source.stop(time + 0.06);
+    source.onended = () => {
+      source.disconnect();
+      envelope.disconnect();
+    };
+  }
+
+  /** Post-fader level of one track, for its meter. Zero for tracks with no strip yet. */
+  getTrackLevel(trackId: string): number {
+    const played =
+      this.auditionGraph && this.auditionTrackId === trackId
+        ? this.auditionGraph.level()
+        : 0;
+    return Math.max(played, this.tracks.get(trackId)?.level() ?? 0);
+  }
+  /** Ticks between a sound leaving the engine and being heard, at the current tempo. Recording
+   * subtracts this so notes land where the player heard the beat. */
+  getLatencyTicks(): number {
+    if (!this.context || !this.project) return 0;
+    const seconds =
+      (this.context.outputLatency || this.context.baseLatency || 0) + 0.005;
+    return Math.round((seconds * this.project.transport.bpm * PPQ) / 60);
+  }
+
+  async audition(track: Track, pitch: number, velocity = 0.8): Promise<void> {
+    await this.init();
+    const strip = this.stripFor(track);
+    if (!this.context || !strip) return;
+    const voice = synthesize(
+      this.context,
+      strip.input,
       track.instrument,
       pitch,
       velocity,

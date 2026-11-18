@@ -3,6 +3,8 @@ import type { Track, Instrument } from "../domain/models";
 
 export interface Voice {
   stop(time?: number): void;
+  /** Lets a held note die away over roughly `seconds`, the way lifting a key does. */
+  release(seconds?: number): void;
 }
 const clamp = (value: number, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
@@ -233,6 +235,8 @@ export class TrackGraph {
   private readonly reverbSend: GainNode;
   private readonly delaySend: GainNode;
   private readonly nodes: AudioNode[];
+  private readonly meter: AnalyserNode | null = null;
+  private readonly meterData: Float32Array<ArrayBuffer> | null = null;
   constructor(
     private readonly context: BaseAudioContext,
     bus: MixBus,
@@ -263,6 +267,14 @@ export class TrackGraph {
       this.reverbSend,
       this.delaySend,
     ];
+    // Realtime strips get a post-fader tap for the track meter; offline renders do not need one.
+    if ("baseLatency" in context) {
+      this.meter = context.createAnalyser();
+      this.meter.fftSize = 256;
+      this.meterData = new Float32Array(this.meter.fftSize);
+      this.output.connect(this.meter);
+      this.nodes.push(this.meter);
+    }
     this.update(track, audible, true);
   }
   update(track: Track, audible: boolean, immediate = false) {
@@ -283,6 +295,15 @@ export class TrackGraph {
     );
     set(this.reverbSend.gain, clamp(track.effects.reverb) * 0.6);
     set(this.delaySend.gain, clamp(track.effects.delay) * 0.55);
+  }
+  /** Post-fader peak of the last few milliseconds, 0–1. */
+  level(): number {
+    if (!this.meter || !this.meterData) return 0;
+    this.meter.getFloatTimeDomainData(this.meterData);
+    let peak = 0;
+    for (const sample of this.meterData)
+      peak = Math.max(peak, Math.abs(sample));
+    return Math.min(1, peak);
   }
   dispose() {
     this.nodes.forEach((node) => node.disconnect());
@@ -307,6 +328,25 @@ function voice(
     done?.(result);
   };
   const result: Voice = {
+    release(seconds = 0.2) {
+      const now = context.currentTime;
+      const length = Math.min(6, Math.max(0.02, seconds));
+      try {
+        // `out` carries no automation of its own, so it can fade whatever the note's own
+        // envelope is doing at this moment.
+        out.gain.cancelScheduledValues(now);
+        out.gain.setTargetAtTime(0, now, length / 4);
+      } catch {
+        /* the context is closing */
+      }
+      sources.forEach((source) => {
+        try {
+          source.stop(now + length * 1.3 + 0.03);
+        } catch {
+          /* already stopped */
+        }
+      });
+    },
     stop(time = 0) {
       const now = context.currentTime;
       const at = time > 0 ? time : now + 0.03;

@@ -39,7 +39,18 @@ import {
   CircleHelp,
   Headphones,
   ArrowUpRight,
+  Circle,
+  Timer,
+  Keyboard as KeyboardIcon,
+  Cable,
 } from "lucide-react";
+import {
+  connectMidi,
+  setArmed,
+  setMetronome,
+  startPerformance,
+} from "../input/performance";
+import { usePerformanceStore } from "../stores/performanceStore";
 import {
   BAR,
   INSTRUMENTS,
@@ -83,6 +94,8 @@ import { Inspector, Range } from "../components/Inspector";
 import { PianoRoll } from "../components/PianoRoll";
 import { DrumSequencer } from "../components/DrumSequencer";
 import { Keyboard } from "../components/Keyboard";
+import { BpmInput } from "../components/BpmInput";
+import { NumberField } from "../components/NumberField";
 import { Modal } from "../components/Modal";
 import { SampleBrowser } from "../components/SampleBrowser";
 import { Ideas } from "../components/Ideas";
@@ -154,6 +167,12 @@ export function App() {
   // starts or stops, never because the playhead moved.
   const playing = useTransportStore((state) => state.playing);
   const patternPreview = useTransportStore((state) => state.previewing);
+  const armed = usePerformanceStore((state) => state.armed);
+  const metronome = usePerformanceStore((state) => state.metronome);
+  const typing = usePerformanceStore((state) => state.typing);
+  const typingOctave = usePerformanceStore((state) => state.octave);
+  const midi = usePerformanceStore((state) => state.midi);
+  const midiDevices = usePerformanceStore((state) => state.midiDevices);
   const [panel, setPanel] = useState<Panel>(null),
     [ready, setReady] = useState(false),
     [saveStatus, setSaveStatus] = useState("Opening local session…"),
@@ -269,6 +288,13 @@ export function App() {
     return () => clearTimeout(timer);
   }, [project, ready, notify]);
   useEffect(() => startTransportSync(), []);
+  useEffect(() => startPerformance(notify), [notify]);
+  // Dialogs and the Math Lab own the keyboard while they are open.
+  useEffect(() => {
+    usePerformanceStore.setState({
+      suspended: panel !== null || workspace !== "studio",
+    });
+  }, [panel, workspace]);
   useEffect(() => {
     setPatternId(null);
     engine.stopPreview();
@@ -624,22 +650,41 @@ export function App() {
           >
             <Repeat2 />
           </button>
+          <button
+            className={`icon-button record-button ${armed ? "active" : ""}`}
+            title={
+              armed
+                ? "Recording is on: press Play, then play notes · R"
+                : "Record what you play into the selected track · R"
+            }
+            aria-label="Record"
+            aria-pressed={armed}
+            onClick={() => setArmed(!armed)}
+          >
+            <Circle size={13} fill={armed ? "currentColor" : "none"} />
+          </button>
+          <button
+            className={`icon-button loop-button ${metronome ? "active" : ""}`}
+            title="Metronome: a click on every beat while playing"
+            aria-label="Metronome"
+            aria-pressed={metronome}
+            onClick={() => setMetronome(!metronome)}
+          >
+            <Timer size={15} />
+          </button>
           <PositionReadout />
           <span className="divider" />
           <label className="bpm-control">
-            <input
-              aria-label="BPM"
-              type="number"
-              min="40"
-              max="240"
-              value={project.transport.bpm}
-              onChange={(e) =>
-                update("Change tempo", (p) => {
-                  p.transport.bpm = Math.max(
-                    40,
-                    Math.min(240, +e.target.value),
-                  );
-                })
+            <BpmInput
+              bpm={project.transport.bpm}
+              onChange={(bpm) =>
+                update(
+                  "Change tempo",
+                  (p) => {
+                    p.transport.bpm = bpm;
+                  },
+                  { coalesceKey: "tempo" },
+                )
               }
             />
             <span>BPM</span>
@@ -799,7 +844,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.5</div>
+            <div className="version-label">STUDIO / V.1.6</div>
           </div>
         </nav>
         {workspace === "math" ? (
@@ -1133,8 +1178,8 @@ export function App() {
               )}
               {keyboard && (
                 <Keyboard
-                  onAudition={(pitch) => audition(pitch)}
                   musicalKey={project.key}
+                  drums={track?.type === "drums"}
                 />
               )}
             </section>
@@ -1149,6 +1194,45 @@ export function App() {
                 SPACE <span>Play / Pause</span>
                 <i />⌘ Z <span>Undo</span>
               </span>
+              <div className="input-controls">
+                <button
+                  className={typing ? "on" : ""}
+                  aria-label="Play notes with the computer keyboard"
+                  aria-pressed={typing}
+                  title="Keys A to L play the selected track · Z and X change octave"
+                  onClick={() =>
+                    usePerformanceStore.setState({ typing: !typing })
+                  }
+                >
+                  <KeyboardIcon size={12} />
+                  {typing ? `Keys · C${typingOctave}` : "Keys off"}
+                </button>
+                <button
+                  className={midi === "connected" ? "on" : ""}
+                  aria-label="Connect a MIDI keyboard"
+                  title={
+                    midi === "connected"
+                      ? `Playing from: ${midiDevices.join(", ")}`
+                      : "Play and record from a MIDI keyboard"
+                  }
+                  onClick={() => void connectMidi()}
+                >
+                  <Cable size={12} />
+                  {
+                    {
+                      off: "MIDI",
+                      connecting: "MIDI…",
+                      connected:
+                        midiDevices.length === 1
+                          ? midiDevices[0]
+                          : `${midiDevices.length} MIDI inputs`,
+                      "no-devices": "No MIDI device found",
+                      denied: "MIDI blocked by browser",
+                      unsupported: "MIDI not supported here",
+                    }[midi]
+                  }
+                </button>
+              </div>
               <div className="master-control">
                 <Headphones size={13} />
                 <span>Master</span>
@@ -1400,20 +1484,18 @@ export function App() {
             <div className="two-fields">
               <label className="field-label">
                 Start bar
-                <input
-                  aria-label="Loop start bar"
-                  type="number"
-                  min="1"
+                <NumberField
+                  label="Loop start bar"
+                  min={1}
                   max={project.transport.loopEnd / BAR}
+                  step={1}
+                  precision={0}
                   value={project.transport.loopStart / BAR + 1}
-                  onChange={(e) =>
+                  onChange={(bar) =>
                     update("Set loop start", (p) => {
                       p.transport.loopStart = Math.max(
                         0,
-                        Math.min(
-                          p.transport.loopEnd - BAR,
-                          Math.round(+e.target.value - 1) * BAR,
-                        ),
+                        Math.min(p.transport.loopEnd - BAR, (bar - 1) * BAR),
                       );
                     })
                   }
@@ -1421,20 +1503,18 @@ export function App() {
               </label>
               <label className="field-label">
                 End bar (inclusive)
-                <input
-                  aria-label="Loop end bar"
-                  type="number"
+                <NumberField
+                  label="Loop end bar"
                   min={project.transport.loopStart / BAR + 1}
-                  max="256"
+                  max={256}
+                  step={1}
+                  precision={0}
                   value={project.transport.loopEnd / BAR}
-                  onChange={(e) =>
+                  onChange={(bar) =>
                     update("Set loop end", (p) => {
                       p.transport.loopEnd = Math.min(
                         BAR * 256,
-                        Math.max(
-                          p.transport.loopStart + BAR,
-                          Math.round(+e.target.value) * BAR,
-                        ),
+                        Math.max(p.transport.loopStart + BAR, bar * BAR),
                       );
                     })
                   }

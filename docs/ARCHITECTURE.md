@@ -9,6 +9,7 @@ STUDIO is a browser-local React/Vite application. Its musical state is serializa
 - `src/domain/harmony.ts`: reads harmony from notes (`detectChord`, `inferProgression`), and voices chords with voice leading (`voiceChord`, `voiceProgression`). Pure functions over the project model; used by the idea generator and the piano roll's chord tool.
 - `src/domain/validation.ts`: Zod input validation, ID/reference checks, note bounds, schema-version handling. Unknown future versions fail explicitly without deleting stored data.
 - `src/stores/transportStore.ts`: playback readings (tick, playing, level, preview) copied from the engine once per animation frame. Playheads and the meter subscribe to it and write to their DOM nodes directly; the App shell re-renders when playback starts or stops, not while it runs.
+- `src/input/performance.ts`, `src/stores/performanceStore.ts`, `src/domain/recording.ts`: live input. Computer keys, the on-screen keyboard and Web MIDI all call `pressNote`/`releaseNote`; the engine holds a voice per key (`noteOn`/`noteOff`, released on Stop) through a private audition strip so muted tracks can still be played. While Record is armed and the transport runs, played notes are collected with latency-corrected ticks; on stop, the pure `applyTake` writes them into the project as one undoable update. The metronome is a repeating event on the same Tone transport, routed to the master bus only in realtime. `src/components/NumberField.tsx` is the shared number input that keeps the typed text and applies only in-range values.
 - `src/stores/projectStore.ts`: authoritative project, selection, and up to 80 undo/redo snapshots. Pointer drags commit once. Optional coalescing combines continuous changes without merging discrete musical operations.
 - `src/audio/scheduler.ts`: pure conversion from shared patterns and positioned clips into musical events. No React state or wall-clock timer participates in this conversion.
 - `src/audio/engine.ts`: one audio service. Tone.Transport schedules using Web Audio timestamps; React reads the audio clock for visuals. A serial counter invalidates stale async Play requests. Imported assets decode without activating realtime audio. Realtime graphs persist across visual/theme changes.
@@ -44,7 +45,7 @@ OfflineAudioContext uses the same instruments/effects as playback. The compositi
 ## Further development
 
 1. Add explicit unused-asset cleanup and a migration registry when a real schema transition is introduced.
-2. Add MIDI input/recording and pointer-held audition envelopes.
+2. Add sustain-pedal and controller recording, count-in, and a per-take record review.
 3. Have the interface call `domain/commands.ts` for clip and drum-step edits; those functions are tested but several components still carry their own equivalent logic.
 4. Extend timing to other signatures and add tempo automation.
 5. Add waveform-region selection, sample time-stretch, and audio fades.

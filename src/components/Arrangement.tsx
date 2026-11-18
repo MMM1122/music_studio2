@@ -24,7 +24,7 @@ import { engine } from "../audio/engine";
 import { useProjectStore } from "../stores/projectStore";
 import { useTransportStore, refreshTransport } from "../stores/transportStore";
 import { ticksToSeconds } from "../domain/timing";
-import { TimelinePlayhead } from "./TransportReadouts";
+import { TimelinePlayhead, TrackMeter } from "./TransportReadouts";
 
 interface Props {
   assetRevision?: number;
@@ -408,6 +408,7 @@ export function Arrangement({
                       })
                     }
                   />
+                  <TrackMeter trackId={track.id} />
                   <div className="track-order">
                     <button
                       title={`Move ${track.name} up`}
