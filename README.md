@@ -2,9 +2,11 @@
 
 **A creative playground where mathematics becomes music.**
 
-**[Open STUDIO — Live Website →](https://studio-music-yvette.yvettewu2017.chatgpt.site)**
+**[Open STUDIO — Live Website →](https://music-studio2.vercel.app)**
 
-Publicly accessible in your browser. No login or installation required. Click **Play** to start audio.
+Publicly accessible in your browser. No login or installation required. Click **Play** to start audio. The site redeploys automatically from `main` on Vercel.
+
+Moving from the earlier address (`studio-music-yvette.yvettewu2017.chatgpt.site`)? Projects are saved per address. On the old site use **Projects → Export complete project**, then **Import complete project** here.
 
 The public website is deployed from this repository. Existing saved sessions stay unchanged; choose **Projects → Open demo session** to hear the latest musical arrangement.
 
