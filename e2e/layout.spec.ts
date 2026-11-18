@@ -175,3 +175,29 @@ test("fit to window shows the whole song in the arrangement", async ({
     .evaluate((el) => el.getBoundingClientRect().left)) as number;
   expect(right - left).toBeGreaterThan((edge - left) * 0.8);
 });
+
+test("the playhead passes under the track names when the timeline scrolls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.waitForFunction("!!window.__studioTest");
+  await expect(page.getByLabel("Project title")).toHaveValue("Sunday, softly");
+  const lanes = page.locator(".arrangement .timeline-scroll");
+  const label = page.locator(".arrangement .ruler-label");
+  // At bar 1 the playhead sits on the left edge of the lanes, just right of the label.
+  await lanes.evaluate((el) => (el.scrollLeft = 0));
+  await page.waitForTimeout(150);
+  const clear = await label.screenshot();
+  // Scrolled 100 px, bar 1 is behind the sticky label column: the label must cover it.
+  await lanes.evaluate((el) => (el.scrollLeft = 100));
+  await page.waitForTimeout(150);
+  const scrolled = await label.screenshot();
+  expect(scrolled.equals(clear)).toBe(true);
+  // The same holds for every track name.
+  const header = page.locator(".arrangement .track-header").first();
+  const headerScrolled = await header.screenshot();
+  await lanes.evaluate((el) => (el.scrollLeft = 0));
+  await page.waitForTimeout(150);
+  expect((await header.screenshot()).equals(headerScrolled)).toBe(true);
+});

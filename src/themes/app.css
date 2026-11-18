@@ -403,8 +403,10 @@ h1 em {
   display: flex;
   height: 41px;
   background: var(--color-background);
+  /* No z-index here: a stacking context would trap the sticky label column below the
+     playhead. Without one, the label (z 3) covers the playhead (z 2) when bar 1 scrolls
+     behind it, and the playhead still draws over the bar numbers and loop strip. */
   position: relative;
-  z-index: 2;
 }
 .track-column {
   width: 168px;
