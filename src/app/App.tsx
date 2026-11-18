@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   lazy,
   Suspense,
   useCallback,
@@ -96,6 +97,7 @@ import { DrumSequencer } from "../components/DrumSequencer";
 import { Keyboard } from "../components/Keyboard";
 import { BpmInput } from "../components/BpmInput";
 import { NumberField } from "../components/NumberField";
+import { PaneDivider } from "../components/PaneDivider";
 import { Modal } from "../components/Modal";
 import { SampleBrowser } from "../components/SampleBrowser";
 import { Ideas } from "../components/Ideas";
@@ -163,6 +165,16 @@ export function App() {
     [inspector, setInspector] = useState(true),
     [editor, setEditor] = useState(true),
     [keyboard, setKeyboard] = useState(false);
+  // Height of the arrangement lanes while an editor is open; null follows the window.
+  const [timelineHeight, setTimelineHeight] = useState<number | null>(() => {
+    const stored = Number(readPreference("timeline-height"));
+    return Number.isFinite(stored) && stored >= 120 ? stored : null;
+  });
+  const studioPane = useRef<HTMLElement>(null);
+  const changeTimelineHeight = (height: number | null) => {
+    setTimelineHeight(height);
+    writePreference("timeline-height", height === null ? "" : String(height));
+  };
   // Playback readings come from their own store; this component re-renders when playback
   // starts or stops, never because the playhead moved.
   const playing = useTransportStore((state) => state.playing);
@@ -844,7 +856,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.6</div>
+            <div className="version-label">STUDIO / V.1.7</div>
           </div>
         </nav>
         {workspace === "math" ? (
@@ -865,17 +877,22 @@ export function App() {
             />
           </Suspense>
         ) : (
-          <main className="workspace">
-            <div className="workspace-heading">
+          <main
+            ref={studioPane}
+            className={`workspace ${editor ? "editor-open" : ""}`}
+            style={
+              timelineHeight === null
+                ? undefined
+                : ({
+                    "--timeline-height": `${timelineHeight}px`,
+                  } as CSSProperties)
+            }
+          >
+            <div className="workspace-heading compact">
               <div className="heading-copy">
-                <span className="eyebrow">A SPACE FOR SOUND</span>
                 <h1>
                   Make room for <em>your sound.</em>
                 </h1>
-                <p className="heading-subtitle">
-                  A few notes. A little curiosity. Something only you could
-                  make.
-                </p>
               </div>
               <div className="heading-aside">
                 <SessionArtwork />
@@ -908,6 +925,20 @@ export function App() {
               onOpenEditor={() => setEditor(true)}
               onInspector={() => setInspector(!inspector)}
             />
+            {editor && (
+              <PaneDivider
+                label="Resize arrangement and editor"
+                value={timelineHeight}
+                measure={() =>
+                  studioPane.current?.querySelector<HTMLElement>(
+                    ".arrangement .timeline-scroll",
+                  )?.offsetHeight ?? 260
+                }
+                // Leave the editor at least its toolbars and a few rows of notes.
+                max={() => (studioPane.current?.clientHeight ?? 800) - 330}
+                onChange={changeTimelineHeight}
+              />
+            )}
             <section
               className="editor-section"
               data-color={track?.color ?? "mauve"}

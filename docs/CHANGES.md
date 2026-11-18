@@ -1,5 +1,12 @@
 # STUDIO release notes
 
+## Version 1.7 — Room to edit
+
+- **The editor is on screen.** The Studio heading is one line instead of a 112 px banner, and the arrangement and the editor now share the window: the arrangement lanes take about half of the remaining height and the piano roll or drum grid fills the rest, so notes are visible without scrolling at 1440×900 and 1280×760 (before, the 1280×760 window showed no note grid at all). A divider between the two can be dragged, stepped with the arrow keys (Home/End for the limits), and reset with a double-click or Enter; its height is remembered.
+- **Easier to read.** Every font size under 11 px was raised: 7–8 px uppercase labels and ruler numbers to 10 px, 9–10 px text to 11 px. Secondary text is darker in Gallery Light (#67635E, at least 4.7:1 on every surface) and muted text is darker in both themes (#77726C light, #8E8A85 dark; at least 4.5:1 on the page background).
+- Editor toolbars no longer shrink when space is tight; the save status stays on one line.
+- Tests: new `e2e/layout.spec.ts` checks the visible note grid at both window sizes, the divider (drag, keys, reload, reset), a 10 px floor for text and the contrast ratios.
+
 ## Version 1.6 — Play it in
 
 - **Typed tempos stick.** The BPM field clamped on every keystroke, so typing 120 over 86 produced 240 (the "1" became 40, then "401" became 240), and clearing the field jumped to 40. The field now keeps what you type, applies a value as soon as it is in range, clamps only on Enter or leaving the field, restores the previous tempo on Escape or an empty entry, and records one undo step per edit. The same fix covers the Math Lab Function and Bayesian BPM fields, loop start/end bars, clip start/length, audio trim start, and attack/release.
