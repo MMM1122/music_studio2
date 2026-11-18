@@ -1,5 +1,12 @@
 # STUDIO release notes
 
+## Version 1.7.1 — Fewer words, whole song
+
+- **One tagline.** "Make room for your sound." is the only brand line left. Removed the sidebar's "Room for your own sound.", the arrangement's "Make room for another sound." and the keyboard's "PLAY SOMETHING / Every idea starts with a note."; the footer now says what to do: "Audio starts when you press Play".
+- **Fit to window.** A new arrangement button zooms so every clip (or the loop, in an empty song) fits the visible lanes and scrolls back to bar 1. Zooming out can now go down to 12 px per bar for long songs.
+- **Math Lab heading** is one line like the Studio's (the eyebrow, subtitle and large artwork are gone), so the tools start about 95 px higher.
+- Tests: `e2e/layout.spec.ts` adds a fit-to-window check (43 browser tests in total).
+
 ## Version 1.7 — Room to edit
 
 - **The editor is on screen.** The Studio heading is one line instead of a 112 px banner, and the arrangement and the editor now share the window: the arrangement lanes take about half of the remaining height and the piano roll or drum grid fills the rest, so notes are visible without scrolling at 1440×900 and 1280×760 (before, the 1280×760 window showed no note grid at all). A divider between the two can be dragged, stepped with the arrow keys (Home/End for the limits), and reset with a double-click or Enter; its height is remembered.

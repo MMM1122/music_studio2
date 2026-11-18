@@ -143,3 +143,35 @@ test("no text is set below 10 px and secondary text meets 4.5:1 contrast", async
     expect(report.muted).toBeGreaterThanOrEqual(4.5);
   }
 });
+
+test("fit to window shows the whole song in the arrangement", async ({
+  page,
+}) => {
+  await open(page, 1280, 760);
+  const lanes = page.locator(".arrangement .timeline-scroll");
+  for (let i = 0; i < 4; i++) await page.getByTitle("Zoom in timeline").click();
+  // Zoomed in, the song runs past the right edge.
+  const lastClip = async () => {
+    const boxes = await page
+      .locator(".arrangement .clip")
+      .evaluateAll((clips) =>
+        clips.map((clip) => clip.getBoundingClientRect().right),
+      );
+    return Math.max(...boxes);
+  };
+  const visibleRight = async () =>
+    (await lanes.evaluate((el) => el.getBoundingClientRect().right)) as number;
+  expect(await lastClip()).toBeGreaterThan(await visibleRight());
+
+  await page.getByRole("button", { name: "Fit song to window" }).click();
+  expect(await lanes.evaluate((el) => el.scrollLeft)).toBe(0);
+  const right = await lastClip();
+  const edge = await visibleRight();
+  // The end of the song is on screen and uses most of the width.
+  expect(right).toBeLessThanOrEqual(edge);
+  const left = (await page
+    .locator(".arrangement .timeline-ruler")
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().left)) as number;
+  expect(right - left).toBeGreaterThan((edge - left) * 0.8);
+});
