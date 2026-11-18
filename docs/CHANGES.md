@@ -1,5 +1,9 @@
 # STUDIO release notes
 
+## Version 1.7.2 — Playhead fix
+
+- The playhead marker no longer draws over the "TRACKS" label when the arrangement is scrolled sideways (for example after double-clicking a clip further right). The ruler row created its own stacking layer, which trapped the sticky label below the playhead; it no longer does. Regression test in `e2e/layout.spec.ts` (44 browser tests).
+
 ## Version 1.7.1 — Fewer words, whole song
 
 - **One tagline.** "Make room for your sound." is the only brand line left. Removed the sidebar's "Room for your own sound.", the arrangement's "Make room for another sound." and the keyboard's "PLAY SOMETHING / Every idea starts with a note."; the footer now says what to do: "Audio starts when you press Play".
