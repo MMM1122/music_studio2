@@ -3,14 +3,30 @@ import { arrangementEnd } from "../domain/timing";
 export { ticksToSeconds, secondsToTicks } from "../domain/timing";
 
 export const arrangementEndTick = arrangementEnd;
-export const isTrackAudible = (project: Project, trackId: string) => {
-  const track = project.tracks.find((item) => item.id === trackId);
+export type ReferenceMode = "reference" | "composition" | "both";
+export const isTrackAudible = (
+  project: Project,
+  trackId: string,
+  mode: ReferenceMode = "both",
+) => {
+  const eligible = project.tracks.filter(
+    (t) =>
+      mode === "both" ||
+      (mode === "reference" ? t.role === "reference" : t.role !== "reference"),
+  );
+  const track = eligible.find((t) => t.id === trackId);
   return (
     !!track &&
     !track.mixer.mute &&
-    (!project.tracks.some((item) => item.mixer.solo) || track.mixer.solo)
+    (!eligible.some((t) => t.mixer.solo) || track.mixer.solo)
   );
 };
+export function compositionProject(project: Project): Project {
+  return {
+    ...project,
+    tracks: project.tracks.filter((track) => track.role !== "reference"),
+  };
+}
 interface EventBase {
   trackId: string;
   clipId: string;

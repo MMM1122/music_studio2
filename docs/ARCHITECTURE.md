@@ -25,11 +25,11 @@ Musical positions/durations are integer ticks. BPM converts ticks to seconds onl
 
 Arrangement movement snaps to a quarter-note beat; piano editing supports quarter/eighth/sixteenth/thirty-second snapping. Shrinking a pattern removes notes after its new end and trims crossing notes, as one undoable command. The arrangement can scroll beyond the 16-bar starter session.
 
-Mute overrides solo. If any track is soloed, only unmuted soloed tracks reach the output. Audio plays at its original sample rate/speed; a trim offset selects where the sample begins, and looping repeats the remaining trimmed segment. Audio duration is represented musically, so changing BPM changes the clip's timeline gate, not the pitch or playback rate of its source.
+Mute overrides solo. A/B monitoring first chooses Reference, My Composition or Both; if any eligible track is soloed, only unmuted soloed tracks in that group reach the output. Audio plays at its original sample rate/speed; a trim offset selects where the sample begins, and looping repeats the remaining trimmed segment. Ordinary audio duration is represented musically, so changing BPM changes its timeline gate, not source speed/pitch. Reference clips are the exception: their start and duration ticks rescale with BPM to retain absolute seconds. With a reference present, a live tempo change re-cues all voices at the current musical tick under the new tempo.
 
 Independent pattern preview renders a dry pattern into an AudioBuffer, then loops it with a native AudioBufferSourceNode through a reusable preview effects graph. Preview pauses the arrangement and preserves its resume position. Studio editor/Ideas snapshot previews require restarting after edits. Math Lab uses a live transport-scheduled preview: it clears/replaces future note events without pausing, keeps its own loop settings, and restores Studio transport configuration on return. Arrangement edits also reschedule automatically.
 
-Edits during playback replace only the plan for the future. Events live on Tone's transport timeline in ticks, so clearing and re-adding them while the transport runs cannot fire an event twice: the transport only fires what it has not yet passed. Notes already sounding finish naturally, tempo changes apply to the running transport, and mix/effect changes glide in place. The transport is restarted only by Play, Stop, Seek, or opening another project. Stopping fades voices over a few milliseconds rather than cutting them. Theme switching touches no audio state.
+Edits during playback replace only the plan for the future. Events live on Tone's transport timeline in ticks, so clearing and re-adding them while the transport runs cannot fire an event twice: the transport only fires what it has not yet passed. Notes already sounding finish naturally, tempo changes apply to the running transport, and mix/effect changes glide in place. The transport is restarted by Play, Stop, Seek, opening another project, or a tempo change with reference tracks present. Stopping fades voices over a few milliseconds rather than cutting them. Theme switching touches no audio state.
 
 ## Persistence and validation
 
@@ -39,7 +39,7 @@ Assets remain local to the browser's origin/profile. JSON backup contains metada
 
 ## Export and resource bounds
 
-OfflineAudioContext uses the same instruments/effects as playback. The arrangement end plus two seconds determines its exact frame count, rounded up to the nearest 44.1 kHz frame. The export ignores loop settings, includes only audible tracks, and reports progress stages. Validation bounds external project sizes; exports longer than ten minutes are rejected before allocating their output buffer.
+OfflineAudioContext uses the same instruments/effects as playback. The composition end (at least one bar), after excluding reference tracks, plus two seconds determines its exact frame count, rounded up to the nearest 44.1 kHz frame. The export ignores loop settings, includes only audible tracks, and reports progress stages. Validation bounds external project sizes; exports longer than ten minutes are rejected before allocating their output buffer.
 
 ## Further development
 
@@ -54,3 +54,7 @@ OfflineAudioContext uses the same instruments/effects as playback. The arrangeme
 ## Loading and UI subscriptions
 
 Math Lab is a React lazy workspace. Tone is imported at audio activation; reading meters does not initialize it. App, Arrangement, Inspector, Ideas and SampleBrowser select their needed store state; this avoids unrelated store notifications but does not promise unchanged track identity across deep-cloned project edits. The audio graph and common models remain shared.
+
+## Reference recording analysis
+
+References use optional track metadata in schema version 1, the existing audio importer/IndexedDB storage and the same playback clock. PCM-derived waveform caches stay outside project state; a bounded local worker estimates periodicity and a per-track analyser supplies the live spectrum. A/B changes monitoring, while WAV/MIDI export independently excludes references before solo and duration calculations. See [REFERENCE_TRACKS.md](REFERENCE_TRACKS.md) for file boundaries, resource limits and exact tempo/seek semantics.

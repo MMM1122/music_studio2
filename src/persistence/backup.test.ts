@@ -78,6 +78,35 @@ describe("complete project backups", () => {
     expect(second.project.id).not.toBe(restored.project.id);
     expect(second.project.assets[0].id).not.toBe(replacement);
   });
+  it("preserves reference role, source markers and tempo analysis through storage and complete backup", async () => {
+    const { project, assetId, blob } = withAudio();
+    const track = project.tracks.at(-1)!;
+    track.role = "reference";
+    track.reference = {
+      markers: [{ id: uid(), label: "Intro", timeSeconds: 0.25 }],
+      tempo: {
+        bpm: 104,
+        confidence: 0.72,
+        alternatives: [52, 208],
+        analyzedSeconds: 1,
+      },
+      manualBpm: 106,
+    };
+    await saveProject(project);
+    await saveAsset(assetId, blob);
+    expect((await loadProject(project.id))!.tracks.at(-1)!.reference).toEqual(
+      track.reference,
+    );
+    const restored = await restoreProjectBackup(
+      await createProjectBackup(project),
+    );
+    expect(restored.tracks.at(-1)!.role).toBe("reference");
+    expect(restored.tracks.at(-1)!.reference).toEqual(track.reference);
+    expect((await loadProject(restored.id))!.tracks.at(-1)!.reference).toEqual(
+      track.reference,
+    );
+    expect((await getAsset(restored.assets[0].id))?.size).toBe(blob.size);
+  });
   it("refuses to call an incomplete export a complete backup", async () => {
     const { project } = withAudio();
     await expect(

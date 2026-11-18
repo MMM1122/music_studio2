@@ -4,8 +4,9 @@ import { Search, Upload, Play, Square, Plus, AudioLines } from "lucide-react";
 import { type AudioAsset, type AudioClip, uid } from "../domain/models";
 import { createTrack } from "../domain/factories";
 import { secondsToTicks } from "../domain/timing";
+import { createReferenceTrack } from "../domain/reference";
 import { useProjectStore } from "../stores/projectStore";
-import { saveAsset, getAsset } from "../persistence/database";
+import { saveAsset, getAsset, deleteAsset } from "../persistence/database";
 import { engine } from "../audio/engine";
 const STARTERS: (AudioAsset & { url: string })[] = [
   {
@@ -59,8 +60,10 @@ const STARTERS: (AudioAsset & { url: string })[] = [
 ];
 export function SampleBrowser({
   onMessage,
+  onInserted,
 }: {
   onMessage: (s: string) => void;
+  onInserted?: (reference: boolean) => void;
 }) {
   const { projectAssets, update, selectClip } = useProjectStore(
     useShallow((state) => ({
@@ -76,13 +79,19 @@ export function SampleBrowser({
   const player = useRef<HTMLAudioElement | null>(null),
     previewUrl = useRef("");
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(
-    () => () => {
+  const importRole = useRef<"sample" | "reference">("sample");
+  const alive = useRef(true);
+  const previewRequest = useRef(0);
+  const [importError, setImportError] = useState("");
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      previewRequest.current++;
       player.current?.pause();
       if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
-    },
-    [],
-  );
+    };
+  }, []);
   async function blobFor(asset: AudioAsset) {
     const stored = await getAsset(asset.id);
     if (stored) return stored;
@@ -98,6 +107,7 @@ export function SampleBrowser({
     );
   }
   async function play(asset: AudioAsset) {
+    const request = ++previewRequest.current;
     try {
       player.current?.pause();
       if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
@@ -106,81 +116,153 @@ export function SampleBrowser({
         return;
       }
       const blob = await blobFor(asset);
+      if (!alive.current || request !== previewRequest.current) return;
       previewUrl.current = URL.createObjectURL(blob);
       const audio = new Audio(previewUrl.current);
       player.current = audio;
       audio.onended = () => setPreview(null);
       await audio.play();
+      if (!alive.current || request !== previewRequest.current) {
+        audio.pause();
+        return;
+      }
       setPreview(asset.id);
     } catch (e) {
-      onMessage(e instanceof Error ? e.message : "Preview failed.");
+      if (alive.current && request === previewRequest.current)
+        onMessage(e instanceof Error ? e.message : "Preview failed.");
     }
   }
-  async function insert(asset: AudioAsset, source?: Blob) {
-    setBusy(true);
+  async function insert(
+    asset: AudioAsset,
+    source?: Blob,
+    reference = false,
+    projectId = useProjectStore.getState().project.id,
+  ) {
+    const blob = source ?? (await blobFor(asset));
+    const wasStored = !!(await getAsset(asset.id));
     try {
-      const blob = source ?? (await blobFor(asset));
+      if (!engine.hasAsset(asset.id))
+        await engine.loadAsset(asset.id, await blob.arrayBuffer());
       await saveAsset(asset.id, blob);
-      await engine.loadAsset(asset.id, await blob.arrayBuffer());
-      // Decoding can take time: use the current selection and tempo at insertion.
+      // Both decode and disk writes are asynchronous: never insert into a different session.
       const { project, selectedTrackId } = useProjectStore.getState();
-      const selected = project.tracks.find(
-        (t) => t.id === selectedTrackId && t.type === "audio",
-      );
-      const track = selected ?? createTrack("audio");
-      if (!selected) track.name = asset.name;
-      const clip: AudioClip = {
-        id: uid(),
-        type: "audio",
-        name: asset.name,
-        assetId: asset.id,
-        startTick: Math.max(0, Math.round(engine.getTick() / 480) * 480),
-        durationTicks: Math.max(
-          1,
-          Math.round(secondsToTicks(asset.duration, project.transport.bpm)),
-        ),
-        loop: false,
-        gain: 1,
-        offsetSeconds: 0,
-      };
-      update("Add audio sample", (p) => {
+      if (!alive.current || project.id !== projectId)
+        throw new Error(
+          "Import cancelled because the session or Samples window changed. Open Samples and import again.",
+        );
+      const selected = reference
+        ? undefined
+        : project.tracks.find(
+            (t) =>
+              t.id === selectedTrackId &&
+              t.type === "audio" &&
+              t.role !== "reference",
+          );
+      if (!selected && project.tracks.length >= 128)
+        throw new Error(
+          "This session already has 128 tracks. Remove a track before importing.",
+        );
+      const track = reference
+        ? createReferenceTrack(asset, project.transport.bpm)
+        : (selected ?? createTrack("audio"));
+      if (!selected) track.name = asset.name.slice(0, 300);
+      const clip: AudioClip = reference
+        ? (track.clips[0] as AudioClip)
+        : {
+            id: uid(),
+            type: "audio",
+            name: asset.name.slice(0, 300),
+            assetId: asset.id,
+            startTick: Math.max(0, Math.round(engine.getTick() / 480) * 480),
+            durationTicks: Math.max(
+              1,
+              secondsToTicks(asset.duration, project.transport.bpm),
+            ),
+            loop: false,
+            gain: 1,
+            offsetSeconds: 0,
+          };
+      update(reference ? "Import reference track" : "Add audio sample", (p) => {
         if (!p.assets.some((a) => a.id === asset.id))
           p.assets.push({ ...asset });
-        if (selected)
+        if (reference) {
+          p.tracks.unshift(track);
+          p.transport.loop = false;
+        } else if (selected)
           p.tracks.find((t) => t.id === selected.id)!.clips.push(clip);
         else p.tracks.push({ ...track, clips: [clip] });
       });
       selectClip(track.id, clip.id);
-      onMessage(`${asset.name} added to the arrangement.`);
+      onMessage(
+        reference
+          ? `${asset.name} imported as a reference. Arrangement looping is off; your BPM is unchanged.`
+          : `${asset.name} added to the arrangement.`,
+      );
+      onInserted?.(reference);
+    } catch (error) {
+      if (!wasStored) {
+        await deleteAsset(asset.id).catch(() => {});
+        engine.unloadAsset(asset.id);
+      }
+      throw error;
+    }
+  }
+  async function addSample(asset: AudioAsset) {
+    setBusy(true);
+    setImportError("");
+    try {
+      await insert(asset);
     } catch (e) {
-      onMessage(e instanceof Error ? e.message : "Could not add audio.");
+      const message = e instanceof Error ? e.message : "Could not add audio.";
+      setImportError(message);
+      onMessage(message);
     } finally {
-      setBusy(false);
+      if (alive.current) setBusy(false);
     }
   }
   async function importFile(file: File) {
+    setImportError("");
+    const reject = (message: string) => {
+      setImportError(message);
+      onMessage(message);
+    };
+    if (!file.size) {
+      reject(
+        "This file is empty. Choose an MP3, WAV or another browser-supported audio file.",
+      );
+      return;
+    }
     if (file.size > 50 * 1024 * 1024) {
-      onMessage("Choose an audio file smaller than 50 MB.");
+      reject(
+        "Choose an audio file smaller than 50 MB. Export a shorter or more compressed copy first.",
+      );
       return;
     }
     setBusy(true);
-    let ctx: AudioContext | undefined;
+    const id = uid(),
+      reference = importRole.current === "reference",
+      projectId = useProjectStore.getState().project.id;
     try {
-      ctx = new AudioContext();
-      const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
+      // The engine owns the only decoded copy; analysis and playback share this PCM.
+      const buffer = await engine.loadAsset(id, await file.arrayBuffer());
       const asset: AudioAsset = {
-        id: uid(),
-        name: file.name.replace(/\.[^.]+$/, ""),
+        id,
+        name:
+          file.name.replace(/\.[^.]+$/, "").slice(0, 300) || "Imported audio",
         duration: buffer.duration,
         mimeType: file.type || "audio/wav",
-        category: "Imported",
+        category: reference ? "Reference" : "Imported",
       };
-      await insert(asset, file);
-    } catch {
-      onMessage("This file could not be decoded. Try a WAV or MP3 audio file.");
+      await insert(asset, file, reference, projectId);
+    } catch (error) {
+      engine.unloadAsset(id);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "This file could not be decoded. Export a WAV or MP3 copy and import it again.";
+      if (alive.current) reject(message);
     } finally {
-      await ctx?.close();
-      setBusy(false);
+      if (alive.current) setBusy(false);
     }
   }
   const assets = [
@@ -205,12 +287,27 @@ export function SampleBrowser({
         <button
           className="button"
           disabled={busy}
-          onClick={() => fileRef.current?.click()}
+          onClick={() => {
+            importRole.current = "sample";
+            fileRef.current?.click();
+          }}
         >
           <Upload />
           Import audio
         </button>
+        <button
+          className="button"
+          disabled={busy}
+          onClick={() => {
+            importRole.current = "reference";
+            fileRef.current?.click();
+          }}
+        >
+          <Upload />
+          Import Reference
+        </button>
         <input
+          aria-label="Audio import file"
           ref={fileRef}
           type="file"
           accept="audio/*,.wav,.mp3"
@@ -222,6 +319,22 @@ export function SampleBrowser({
           }}
         />
       </div>
+      {busy && (
+        <p className="library-footnote" role="status">
+          Decoding and saving locally… Long recordings may take a moment.
+        </p>
+      )}
+      {importError && (
+        <p className="import-audio-error" role="alert">
+          {importError}
+        </p>
+      )}
+      <p className="library-footnote">
+        Import Reference adds a full song at 0:00 above your tracks and switches
+        off arrangement looping. Its original speed and pitch are preserved;
+        your project BPM stays unchanged. Audio is processed locally. Maximum 50
+        MB per file.
+      </p>
       <div className="filter-tabs">
         {[
           "All",
@@ -233,6 +346,7 @@ export function SampleBrowser({
           "Melodic Loops",
           "One-shots",
           "Imported",
+          "Reference",
         ].map((c) => (
           <button
             className={category === c ? "active" : ""}
@@ -268,7 +382,7 @@ export function SampleBrowser({
               className="button small"
               disabled={busy}
               aria-label={`Add ${a.name}`}
-              onClick={() => void insert(a)}
+              onClick={() => void addSample(a)}
             >
               <Plus />
               Add

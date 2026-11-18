@@ -22,9 +22,12 @@ import {
 import { createPattern, createMidiClip } from "../domain/factories";
 import { engine } from "../audio/engine";
 import { useProjectStore } from "../stores/projectStore";
+import { useTransportStore, refreshTransport } from "../stores/transportStore";
+import { ticksToSeconds } from "../domain/timing";
 import { TimelinePlayhead } from "./TransportReadouts";
 
 interface Props {
+  assetRevision?: number;
   onSeek: (tick: number) => void;
   onAddTrack: () => void;
   onOpenEditor: () => void;
@@ -35,6 +38,7 @@ export function Arrangement({
   onAddTrack,
   onOpenEditor,
   onInspector,
+  assetRevision = 0,
 }: Props) {
   const {
     tracks,
@@ -61,6 +65,8 @@ export function Arrangement({
       update: state.update,
     })),
   );
+  const mode = useTransportStore((state) => state.referenceMode);
+  const bpm = useProjectStore((state) => state.project.transport.bpm);
   const [barWidth, setBarWidth] = useState(66);
   const [drag, setDrag] = useState<{
     id: string;
@@ -235,6 +241,37 @@ export function Arrangement({
           </button>
         </div>
       </div>
+      {tracks.some((track) => track.role === "reference") && (
+        <div
+          className="reference-listening"
+          role="group"
+          aria-label="Reference A/B listening"
+        >
+          <span>LISTEN</span>
+          {(
+            [
+              ["reference", "Reference"],
+              ["composition", "My Composition"],
+              ["both", "Both"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              aria-pressed={mode === value}
+              onClick={() => {
+                engine.setReferenceMode(value);
+                refreshTransport();
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <span>
+            Mute and solo apply within the chosen group · WAV excludes
+            references
+          </span>
+        </div>
+      )}
       <div className="timeline-scroll">
         <div
           className="timeline-content"
@@ -285,7 +322,8 @@ export function Arrangement({
           </div>
           {tracks.map((track, idx) => (
             <div
-              className={`track-row ${track.id === selectedTrackId ? "selected" : ""} ${track.mixer.mute ? "muted-track" : ""}`}
+              data-role={track.role ?? "composition"}
+              className={`track-row ${track.role === "reference" ? "reference-track" : ""} ${track.id === selectedTrackId ? "selected" : ""} ${track.mixer.mute ? "muted-track" : ""}`}
               key={track.id}
               data-color={track.color}
             >
@@ -309,6 +347,24 @@ export function Arrangement({
                     {track.name}
                   </span>
                 </div>
+                {track.role === "reference" && (
+                  <span className="reference-track-label">
+                    REFERENCE ·{" "}
+                    {Math.floor(
+                      ticksToSeconds(track.clips[0]?.durationTicks ?? 0, bpm) /
+                        60,
+                    )}
+                    :
+                    {String(
+                      Math.floor(
+                        ticksToSeconds(
+                          track.clips[0]?.durationTicks ?? 0,
+                          bpm,
+                        ) % 60,
+                      ),
+                    ).padStart(2, "0")}
+                  </span>
+                )}
                 <div className="track-controls">
                   <button
                     className={track.mixer.mute ? "on" : ""}
@@ -431,7 +487,11 @@ export function Arrangement({
                         <span>{clip.name}</span>
                         <span>{clip.loop ? "↻" : ""}</span>
                       </div>
-                      <ClipMiniature clip={clip} patterns={patterns} />
+                      <ClipMiniature
+                        key={`${clip.id}:${assetRevision}`}
+                        clip={clip}
+                        patterns={patterns}
+                      />
                       <div
                         className="clip-resize"
                         title="Drag to resize clip"

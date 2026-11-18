@@ -229,7 +229,7 @@ export class TrackGraph {
   readonly input: GainNode;
   private readonly filter: BiquadFilterNode;
   private readonly pan: StereoPannerNode;
-  private readonly output: GainNode;
+  readonly output: GainNode;
   private readonly reverbSend: GainNode;
   private readonly delaySend: GainNode;
   private readonly nodes: AudioNode[];

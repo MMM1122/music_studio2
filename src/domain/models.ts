@@ -58,10 +58,29 @@ export interface MixerSettings {
   mute: boolean;
   solo: boolean;
 }
+export interface ReferenceMarker {
+  id: string;
+  label: string;
+  /** Timestamp in the original audio source, independent of project tempo. */
+  timeSeconds: number;
+}
+export interface ReferenceTempo {
+  bpm: number;
+  confidence: number;
+  alternatives: number[];
+  analyzedSeconds: number;
+}
+export interface ReferenceInfo {
+  markers: ReferenceMarker[];
+  tempo?: ReferenceTempo;
+  manualBpm?: number;
+}
 export interface Track {
   id: string;
   name: string;
   type: TrackType;
+  role?: "reference";
+  reference?: ReferenceInfo;
   color: TrackColor;
   instrument: Instrument;
   mixer: MixerSettings;

@@ -28,6 +28,16 @@ The line artwork now reads the actual master output's waveform and frequency ene
 
 Read the [Math Lab guide](docs/MATH_LAB.md) for controls, mathematical models, persistence, implementation files, and limitations.
 
+## Reference tracks & Audio Analysis
+
+Import a full song with **Samples → Import Reference**. It appears above your composition with its title, duration and actual waveform. Select its clip to open **Audio Analysis**: zoom and seek the recording, inspect a live frequency spectrum, estimate tempo locally, and place your own Intro / Verse / Chorus / Bridge / Outro markers.
+
+Use **Reference / My Composition / Both** above the arrangement to compare. Reference audio retains its original speed and pitch. Tempo estimates include uncertainty and possible half/double time; only **Set project BPM** changes your session tempo. Reference tracks are excluded from WAV and MIDI exports, while ordinary imported audio still belongs to your composition. Audio stays in your browser and complete `.studio` backups.
+
+![Reference waveform and local analysis](docs/screenshots/reference-analysis-light.png)
+
+See the [Reference Track guide](docs/REFERENCE_TRACKS.md) for full-song import, timing, storage limits, implementation files and verification.
+
 ## Run locally
 
 Use Node.js 22.12+ and npm 10+.
@@ -74,7 +84,7 @@ Use **Projects → Export complete project** to download one `.studio` file with
 
 ## Export audio
 
-Choose **Export → Export WAV**. The offline renderer exports the full arrangement, including audible tracks, mute/solo state, clip timing, instruments, volume/pan, effects, and imported audio. The playback loop region does not shorten the export.
+Choose **Export → Export WAV**. The offline renderer exports the full composition, including audible composition tracks, their mute/solo state, clip timing, instruments, volume/pan, effects, and ordinary imported audio. Reference tracks do not contribute sound or duration, and their Solo state cannot silence the composition export. A/B listening changes monitoring only. The playback loop region does not shorten the export.
 
 Output is stereo **44.1 kHz / PCM 16-bit WAV**, with a two-second release/effect tail. Missing audible audio assets produce an explicit error. Rendering is limited to ten minutes including the tail to bound browser memory. MP3 export is not implemented.
 

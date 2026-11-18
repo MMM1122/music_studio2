@@ -76,6 +76,8 @@ import {
 } from "../persistence/database";
 import { validateProject } from "../domain/validation";
 import { engine } from "../audio/engine";
+import { compositionProject, isTrackAudible } from "../audio/scheduler";
+import { ReferenceAnalysis } from "../components/ReferenceAnalysis";
 import { Arrangement } from "../components/Arrangement";
 import { Inspector, Range } from "../components/Inspector";
 import { PianoRoll } from "../components/PianoRoll";
@@ -156,6 +158,8 @@ export function App() {
     [ready, setReady] = useState(false),
     [saveStatus, setSaveStatus] = useState("Opening local session…"),
     [toast, setToast] = useState("");
+  const [assetRevision, setAssetRevision] = useState(0);
+  const hydration = useRef(0);
   const [audioReady, setAudioReady] = useState(false),
     [projectList, setProjectList] = useState<Project[]>([]),
     [patternId, setPatternId] = useState<string | null>(null),
@@ -187,20 +191,40 @@ export function App() {
   }, [toast]);
   const hydrateAssets = useCallback(
     async (p: Project) => {
-      const missing: string[] = [];
-      for (const a of p.assets) {
+      const request = ++hydration.current;
+      engine.retainAssets(p.assets.map((a) => a.id));
+      const problems: string[] = [];
+      for (const asset of p.assets) {
+        if (
+          request !== hydration.current ||
+          useProjectStore.getState().project.id !== p.id
+        )
+          return;
         try {
-          const blob = await getAsset(a.id);
-          if (blob) await engine.loadAsset(a.id, await blob.arrayBuffer());
-          else missing.push(a.name);
-        } catch {
-          missing.push(a.name);
+          if (!engine.hasAsset(asset.id)) {
+            const blob = await getAsset(asset.id);
+            if (!blob)
+              throw new Error(
+                "missing from local storage; re-import the original file",
+              );
+            await engine.loadAsset(asset.id, await blob.arrayBuffer());
+          }
+        } catch (error) {
+          problems.push(`${asset.name}: ${errorMessage(error)}`);
         }
+        if (
+          request !== hydration.current ||
+          useProjectStore.getState().project.id !== p.id
+        ) {
+          engine.retainAssets(
+            useProjectStore.getState().project.assets.map((a) => a.id),
+          );
+          return;
+        }
+        setAssetRevision((value) => value + 1);
       }
-      if (missing.length)
-        notify(
-          `Missing local audio: ${missing.join(", ")}. Re-import the files to restore their sound.`,
-        );
+      if (problems.length)
+        notify(`Audio could not reopen. ${problems.join("; ")}`);
     },
     [notify],
   );
@@ -425,6 +449,11 @@ export function App() {
           if (!source) return;
           if (
             (source.type === "audio") !== (track.type === "audio") ||
+            (track.role === "reference" &&
+              source.type === "audio" &&
+              track.clips.some(
+                (c) => c.type === "audio" && c.assetId !== source.assetId,
+              )) ||
             (source.type === "midi" &&
               project.patterns[source.patternId]?.kind !==
                 (track.type === "drums" ? "drums" : "midi"))
@@ -511,6 +540,11 @@ export function App() {
   }, []);
   const duration = ticksToSeconds(
     arrangementEnd(project),
+    project.transport.bpm,
+  );
+  const exportProject = compositionProject(project);
+  const exportDuration = ticksToSeconds(
+    arrangementEnd(exportProject),
     project.transport.bpm,
   );
   return (
@@ -765,7 +799,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.4</div>
+            <div className="version-label">STUDIO / V.1.5</div>
           </div>
         </nav>
         {workspace === "math" ? (
@@ -820,6 +854,7 @@ export function App() {
               </div>
             </div>
             <Arrangement
+              assetRevision={assetRevision}
               onSeek={(value) => {
                 engine.seek(value);
                 refreshTransport();
@@ -842,7 +877,9 @@ export function App() {
                     {track?.type === "drums"
                       ? "Drum sequencer"
                       : clip?.type === "audio"
-                        ? "Audio clip"
+                        ? track?.role === "reference"
+                          ? "Reference track"
+                          : "Audio clip"
                         : "Piano roll"}
                     {editor ? (
                       <ChevronDown size={14} />
@@ -1038,6 +1075,19 @@ export function App() {
                         clipStart={patternId ? null : (clip?.startTick ?? null)}
                       />
                     )
+                  ) : clip?.type === "audio" && track?.role === "reference" ? (
+                    <ReferenceAnalysis
+                      key={`${track.id}:${clip.assetId}`}
+                      track={track}
+                      clip={clip}
+                      asset={project.assets.find((a) => a.id === clip.assetId)}
+                      assetRevision={assetRevision}
+                      onSeek={(tick) => {
+                        engine.seek(tick);
+                        refreshTransport();
+                      }}
+                      notify={notify}
+                    />
                   ) : clip?.type === "audio" ? (
                     <div className="audio-clip-editor">
                       <AudioLines size={48} />
@@ -1167,7 +1217,17 @@ export function App() {
           onClose={closePanel}
           wide
         >
-          <SampleBrowser onMessage={notify} />
+          <SampleBrowser
+            onMessage={notify}
+            onInserted={(reference) => {
+              setAssetRevision((value) => value + 1);
+              if (reference) {
+                setPanel(null);
+                setEditor(true);
+                changeWorkspace("studio");
+              }
+            }}
+          />
         </Modal>
       )}
       {panel === "ideas" && (
@@ -1410,22 +1470,23 @@ export function App() {
             <h3>{project.name}</h3>
             <p>
               {
-                project.tracks.filter(
-                  (t) =>
-                    !t.mixer.mute &&
-                    (!project.tracks.some((t) => t.mixer.solo) || t.mixer.solo),
+                exportProject.tracks.filter((t) =>
+                  isTrackAudible(exportProject, t.id),
                 ).length
               }{" "}
               audible tracks · {project.transport.bpm} BPM ·{" "}
-              {Math.round(duration + 2)} seconds
+              {Math.round(exportDuration + 2)} seconds
             </p>
             <div className="export-format">
               <span>WAV / PCM 16-bit</span>
               <span>44.1 kHz · Stereo</span>
             </div>
             <p className="library-footnote">
-              Includes mix, effects, and a two-second release tail. Exports the
-              whole arrangement, regardless of the playback loop.
+              Includes your composition mix, effects, ordinary audio clips and a
+              two-second release tail. Reference tracks are always excluded,
+              including from the export length. A/B listening and reference Solo
+              do not affect exports. Exports the whole composition, regardless
+              of the playback loop.
             </p>
             {exporting ? (
               <div role="status" className="export-progress">
@@ -1439,7 +1500,7 @@ export function App() {
             ) : (
               <button
                 className="button primary"
-                disabled={!project.tracks.some((t) => t.clips.length)}
+                disabled={!exportProject.tracks.some((t) => t.clips.length)}
                 onClick={() => void exportAudio()}
               >
                 <Download />

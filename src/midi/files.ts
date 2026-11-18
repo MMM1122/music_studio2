@@ -16,6 +16,7 @@ import { validateProject } from "../domain/validation";
 import {
   collectEvents,
   isTrackAudible,
+  compositionProject,
   type NoteEvent,
 } from "../audio/scheduler";
 
@@ -453,7 +454,7 @@ function chunk(kind: string, bytes: Uint8Array) {
 /** Type 1 MIDI with an explicit fixed-tempo conductor track. Audio tracks, effects,
  * custom timbres and automation are not representable here. */
 export function exportMidi(input: Project): Uint8Array {
-  const project = validateProject(input);
+  const project = compositionProject(validateProject(input));
   const tracks = project.tracks.filter(
     (track) => track.type !== "audio" && isTrackAudible(project, track.id),
   );

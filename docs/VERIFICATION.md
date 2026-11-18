@@ -1,5 +1,17 @@
 # Verification and current limits
 
+## Version 1.5 checks — Reference Track & Audio Analysis
+
+- **93 unit tests passed** across 11 files. Added coverage includes backward-compatible reference metadata, marker bounds/IDs, reference timing across BPM edits and Undo/Redo, complete-backup metadata, and onset/autocorrelation behavior for synthetic pulse trains, silence, steady tones, short/invalid inputs and work bounds.
+- **29 Chrome browser tests passed** in one full local run, including all existing Studio and Math Lab checks. Seven new checks exercise WAV/MP3 import, corrupt/empty-file errors, PCM waveforms, seek/pause/resume on actual audio, reference-specific FFT, A/B with mute/solo, explicit BPM changes, editable markers, saved audio restoration, removal of the last reference and cache release on active-project deletion.
+- Offline WAV comparison proves that adding a missing 120-second soloed reference leaves an ordinary-audio composition export **byte-for-byte unchanged**, including duration. Frequency measurements distinguish sought source regions (approximately 431 Hz and 668 Hz for 440/660 Hz tones at the analyser's bin resolution). Pausing holds position and resuming advances from it. A prior fractional-tick resume bug was fixed; tests now check that the position does not jump forward.
+- **Strict TypeScript and production build passed.** A separate production-browser check imported the synthetic MP3, ran the built tempo worker, added a marker and checked both themes at 1280 × 1000 with no page errors, document-level horizontal overflow or audio upload requests. Screenshots were inspected. No new runtime dependencies were introduced.
+- The user's full MP3 was tested locally, without adding it to the repository: **208.278 seconds**, approximately **70.08 MiB** decoded PCM, around **2.1 seconds** for import/waveform preparation in that run, successful seeking/playback and no observed POST/PUT audio uploads or page errors. The middle-three-minute tempo estimate was **154.6 BPM**, with **77.3 BPM** as a metrical alternative and only **27% periodicity**. This is an uncertain estimate, **not a verified tempo**. No human listening assessment was performed.
+- The original demo remains **46.651179 seconds** at export, RMS approximately **0.15984**, peak **0.94568**. Minor render variation does not establish an audible mix change.
+- Browser tests use the actual audio clock; polling replaced a fixed startup delay that could fail on a busy machine. The click-fixture spectrum is sampled faster than its pulse interval to avoid missing every transient. Safari/Firefox, real 8 GB hardware profiling and prolonged multi-song stress remain unverified. Decoder allocations occur before decoded-memory limits can be checked; resource limits are not a total-process memory guarantee.
+
+See [REFERENCE_TRACKS.md](REFERENCE_TRACKS.md) for the import workflow, file map, shared-clock architecture, confidence interpretation, privacy and limits.
+
 ## Version 1.4 checks — Creative flow
 
 - **79 unit tests passed** across 9 files, including curve mapping, complete-backup checksum/inventory validation and atomic rollback, plus MIDI timing, running status, sustain/all-notes-off behavior, empty-track channel accounting, the 128-track/conductor boundary, loops, swing, clip gates and malformed-file rejection.

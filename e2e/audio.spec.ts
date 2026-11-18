@@ -184,7 +184,20 @@ test("real audio clock advances, outputs sound, pauses, seeks and survives rapid
     const { engine, createDemoProject } = window.audioTest;
     await engine.play(createDemoProject(), 0);
   });
-  await page.waitForTimeout(600);
+  // Audio device startup can lag wall-clock timers on a busy machine. Observe
+  // the actual audio clock and signal instead of assuming it started in 600 ms.
+  await expect
+    .poll(() => page.evaluate(() => window.audioTest.engine.getTick()), {
+      timeout: 5000,
+      intervals: [50],
+    })
+    .toBeGreaterThan(200);
+  await expect
+    .poll(() => page.evaluate(() => window.audioTest.engine.getLevel()), {
+      timeout: 5000,
+      intervals: [50],
+    })
+    .toBeGreaterThan(0.001);
   const active = await page.evaluate(() => ({
     playing: window.audioTest.engine.isPlaying(),
     tick: window.audioTest.engine.getTick(),

@@ -1,5 +1,16 @@
 # STUDIO release notes
 
+## Version 1.5 — Reference, analyze, compose
+
+- Added **Samples → Import Reference** through the existing importer, IndexedDB assets and audio engine. Full-song reference tracks appear above composition tracks, with original-speed playback and distinct labels.
+- Added a collapsible PCM waveform with source-time ruler, zoom, navigation and seeking; a track-specific real-time Hz/dB spectrum; bounded local-worker tempo estimation with uncertainty, half/double-time candidates and explicit BPM application; and editable timestamped section markers.
+- Added **Reference / My Composition / Both** monitoring on the shared transport. Tempo edits preserve reference clip placement/duration in seconds and re-cue all voices at the current musical tick during playback.
+- Excluded references from WAV duration, audio and solo eligibility, and from MIDI solo eligibility. Normal audio exports remain intact.
+- Kept schema version 1 backward-compatible with optional validated reference metadata. Existing project saves and complete audio backups preserve markers and tempo corrections.
+- Added import/decode/cache bounds, stale-import and hydration guards, visible missing/corrupt/quota errors, and track analyser cleanup. No dependencies or server audio processing were added.
+- Fixed an existing pause/resume bug: fractional transport ticks must be rounded before passing Tone its integer-tick time string.
+- Added synthetic WAV/MP3 fixtures and regression coverage. No copyrighted recording is included. See [verification](VERIFICATION.md) and the [Reference Track guide](REFERENCE_TRACKS.md).
+
 ## Version 1.4 — Shape, hear, compose
 
 - Drag a 16-point musical curve and hear upcoming notes change while the audio-clock loop keeps its position. Keyboard-accessible points support Up/Down, Home and End.

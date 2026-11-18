@@ -1,0 +1,214 @@
+.reference-analysis {
+  padding: 24px;
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+}
+.reference-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.reference-heading h3 {
+  font-family: var(--font-editorial);
+  font-size: 26px;
+  font-weight: 400;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.reference-heading p,
+.reference-wave-controls > span,
+.reference-notice {
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+.reference-wave-controls,
+.reference-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.reference-analysis label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+.reference-analysis input:not([type="range"]),
+.reference-analysis select {
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 7px;
+  min-width: 0;
+}
+.reference-analysis input[type="number"] {
+  width: 82px;
+}
+.reference-wave {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+}
+.reference-wave canvas {
+  display: block;
+  width: 100%;
+  height: 136px;
+  cursor: crosshair;
+}
+.reference-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-playhead);
+  pointer-events: none;
+}
+.reference-time-ruler {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  margin: 7px 0;
+}
+.reference-navigation {
+  margin: 12px 0 20px;
+}
+.reference-navigation input {
+  flex: 1;
+  min-width: 40px;
+  accent-color: var(--color-slate);
+}
+.reference-navigation span {
+  white-space: nowrap;
+}
+.reference-spectrum {
+  border-top: 1px solid var(--color-border);
+  padding-top: 15px;
+}
+.reference-spectrum-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 9px;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.7px;
+}
+.reference-spectrum canvas {
+  display: block;
+  width: 100%;
+  height: 118px;
+  margin-top: 8px;
+}
+.reference-tools-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+.reference-tool h4 {
+  font-weight: 500;
+  font-size: 12px;
+}
+.reference-tool + .reference-tool {
+  border-left: 1px solid var(--color-border);
+  padding-left: 24px;
+}
+.reference-tempo-result strong {
+  font: 30px var(--font-editorial);
+  display: block;
+}
+.reference-tempo-result span,
+.reference-tempo-result p {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.reference-markers {
+  max-height: 220px;
+  overflow: auto;
+}
+.reference-marker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 7px 0;
+}
+.reference-marker input:not([type="number"]) {
+  width: 110px;
+  flex: 1;
+}
+.reference-marker button:first-child {
+  font-variant-numeric: tabular-nums;
+}
+.reference-listening {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px 24px;
+  border-top: 1px solid var(--color-border);
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+.reference-listening button {
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  font-size: 10px;
+}
+.reference-listening button[aria-pressed="true"] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+.reference-track-label {
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: var(--color-text-secondary);
+  margin-left: 30px;
+  display: block;
+  line-height: 1.2;
+}
+.reference-track .track-header {
+  border-left: 2px solid var(--color-slate);
+}
+.reference-track .clip {
+  border-top: 2px solid var(--color-slate);
+}
+.import-audio-error {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-danger);
+}
+@media (max-width: 1100px) {
+  .reference-tools-grid {
+    grid-template-columns: 1fr;
+  }
+  .reference-tool + .reference-tool {
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+    padding-left: 0;
+    padding-top: 12px;
+  }
+  .reference-heading {
+    align-items: flex-start;
+  }
+  .reference-heading h3 {
+    font-size: 23px;
+  }
+  .reference-listening {
+    padding: 8px 14px;
+  }
+  .reference-analysis {
+    padding: 18px;
+  }
+}

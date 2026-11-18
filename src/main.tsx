@@ -32,6 +32,7 @@ if (import.meta.env.DEV) {
         tick: engine.getTick(),
         previewTick: engine.getPreviewTick(),
         live: engine.isLivePreviewing(),
+        referenceMode: engine.getReferenceMode(),
       }),
       hasAsset: (id: string) => engine.hasAsset(id),
     },

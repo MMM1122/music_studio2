@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
+import type { ReferenceMode } from "../audio/scheduler";
 import { engine } from "../audio/engine";
 import { patternPosition } from "../domain/timing";
 
@@ -12,6 +13,7 @@ export interface TransportReadings {
   level: number;
   previewing: boolean;
   previewTick: number;
+  referenceMode: ReferenceMode;
 }
 export const useTransportStore = create<TransportReadings>(() => ({
   tick: 0,
@@ -19,6 +21,7 @@ export const useTransportStore = create<TransportReadings>(() => ({
   level: 0,
   previewing: false,
   previewTick: 0,
+  referenceMode: "both",
 }));
 
 let frame = 0;
@@ -27,11 +30,13 @@ function read() {
   const state = useTransportStore.getState();
   const tick = engine.getTick();
   const playing = engine.isPlaying();
+  const referenceMode = engine.getReferenceMode();
   const previewing = engine.isPreviewing();
   const previewTick = previewing ? engine.getPreviewTick() : 0;
   // The meter only needs two decimals; coarser values mean fewer store notifications.
   const level = Math.round(engine.getLevel() * 100) / 100;
   if (
+    referenceMode !== state.referenceMode ||
     tick !== state.tick ||
     playing !== state.playing ||
     level !== state.level ||
@@ -44,6 +49,7 @@ function read() {
       level,
       previewing,
       previewTick,
+      referenceMode,
     });
   frame = requestAnimationFrame(read);
 }
@@ -58,6 +64,7 @@ export function startTransportSync(): () => void {
 /** Pushes a reading immediately, for actions whose result should show before the next frame. */
 export function refreshTransport(): void {
   useTransportStore.setState({
+    referenceMode: engine.getReferenceMode(),
     tick: engine.getTick(),
     playing: engine.isPlaying(),
     previewing: engine.isPreviewing(),

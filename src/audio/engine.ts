@@ -19,6 +19,8 @@ import {
   ticksToSeconds,
   secondsToTicks,
   type MusicalEvent,
+  type ReferenceMode,
+  compositionProject,
 } from "./scheduler";
 import { MixBus, TrackGraph, sample, synthesize, type Voice } from "./graph";
 import { encodeWav } from "./wav";
@@ -60,6 +62,47 @@ export class StudioAudioEngine {
   private meterData = new Float32Array(256);
   private tracks = new Map<string, TrackGraph>();
   private assets = new Map<string, AudioBuffer>();
+  private waveformCache = new Map<string, number[]>();
+  private trackAnalysers = new Map<string, AnalyserNode>();
+  private referenceMode: ReferenceMode = "both";
+  getReferenceMode(): ReferenceMode {
+    return this.referenceMode;
+  }
+  setReferenceMode(mode: ReferenceMode): void {
+    this.referenceMode = mode;
+    if (this.project) this.syncGraphs(this.project);
+  }
+  getAssetBuffer(id: string): AudioBuffer | undefined {
+    return this.assets.get(id);
+  }
+  getAssetDuration(id: string): number | undefined {
+    return this.assets.get(id)?.duration;
+  }
+  retainAssets(ids: Iterable<string>): void {
+    const keep = new Set(ids);
+    for (const id of this.assets.keys())
+      if (!keep.has(id)) this.unloadAsset(id);
+  }
+  readTrackSpectrum(
+    trackId: string,
+    data: Float32Array<ArrayBuffer>,
+  ): { sampleRate: number; fftSize: number } | null {
+    const graph = this.tracks.get(trackId);
+    if (!this.context || !graph) {
+      data.fill(-120);
+      return null;
+    }
+    let analyser = this.trackAnalysers.get(trackId);
+    if (!analyser) {
+      analyser = this.context.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0;
+      graph.output.connect(analyser);
+      this.trackAnalysers.set(trackId, analyser);
+    }
+    analyser.getFloatFrequencyData(data);
+    return { sampleRate: this.context.sampleRate, fftSize: analyser.fftSize };
+  }
   private voices = new Set<Voice>();
   private previewVoices = new Set<Voice>();
   private previewGraph: TrackGraph | null = null;
@@ -106,6 +149,15 @@ export class StudioAudioEngine {
   }
 
   async play(project: Project, startTick?: number): Promise<void> {
+    for (const event of collectEvents(project))
+      if (
+        event.type === "audio" &&
+        isTrackAudible(project, event.trackId, this.referenceMode) &&
+        !this.assets.has(event.assetId)
+      )
+        throw new Error(
+          "Audio is still loading or missing. Wait for loading to finish, or re-import the original file from Samples.",
+        );
     this.stopLabNotes();
     const command = ++this.commandSerial;
     await this.init();
@@ -116,7 +168,8 @@ export class StudioAudioEngine {
     this.transport.stop(this.context.currentTime);
     this.project = project;
     this.syncGraphs(project);
-    this.position = Math.max(0, startTick ?? this.position);
+    // Tone tick-notation strings accept integers only; paused readings are fractional.
+    this.position = Math.max(0, Math.round(startTick ?? this.position));
     const end = arrangementEndTick(project);
     if (!project.transport.loop && this.position >= end) this.position = 0;
     if (project.transport.loop && this.position >= project.transport.loopEnd)
@@ -174,7 +227,22 @@ export class StudioAudioEngine {
    * notes already sounding finish naturally, so editing during playback never drops out. */
   update(project: Project): void {
     const prior = this.project;
-    if (prior && prior.id !== project.id) this.stop();
+    if (prior && prior.id !== project.id) {
+      this.stop();
+      this.referenceMode = "both";
+      this.retainAssets(project.assets.map((asset) => asset.id));
+    }
+    // The A/B controls disappear with the last reference. Never leave a hidden
+    // reference-only filter muting an otherwise playable composition.
+    if (!project.tracks.some((track) => track.role === "reference"))
+      this.referenceMode = "both";
+    const recuedTick =
+      this.playing &&
+      prior &&
+      prior.transport.bpm !== project.transport.bpm &&
+      project.tracks.some((t) => t.role === "reference")
+        ? this.readTick()
+        : null;
     this.project = project;
     if (!this.context || !this.transport) return;
     // The Studio toolbar may still be edited while a Lab loop owns the clock.
@@ -187,6 +255,9 @@ export class StudioAudioEngine {
     this.configureTransport(project);
     if (this.schedulingSignature(project) !== this.structure)
       this.schedule(project);
+    // A new fixed tempo maps the same beat position to a different source time.
+    // Re-cue all voices together so the reference stays aligned, at playbackRate 1.
+    if (recuedTick !== null) this.seek(recuedTick);
     if (
       !this.playing &&
       project.transport.loop &&
@@ -589,29 +660,60 @@ export class StudioAudioEngine {
     this.previewGraph = null;
   }
 
-  async loadAsset(id: string, data: ArrayBuffer): Promise<void> {
-    // Decode on an offline context so restoring saved samples never requests audio activation.
+  async loadAsset(id: string, data: ArrayBuffer): Promise<AudioBuffer> {
     const decoder = new OfflineAudioContext(1, 1, EXPORT_SAMPLE_RATE);
-    const decoded = await decoder.decodeAudioData(data.slice(0));
+    let decoded: AudioBuffer;
+    try {
+      decoded = await decoder.decodeAudioData(data.slice(0));
+    } catch {
+      throw new Error(
+        "This audio could not be decoded. It may be corrupted or unsupported by this browser. Export a WAV or MP3 copy and import again.",
+      );
+    }
+    const bytes = decoded.length * decoded.numberOfChannels * 4;
+    if (decoded.duration > 1200 || bytes > 256 * 1024 * 1024)
+      throw new Error(
+        "This recording is too long for in-memory editing. Import a section under 20 minutes and 256 MB of decoded audio.",
+      );
+    const total = [...this.assets].reduce(
+      (sum, [key, buffer]) =>
+        sum + (key === id ? 0 : buffer.length * buffer.numberOfChannels * 4),
+      bytes,
+    );
+    if (total > 512 * 1024 * 1024)
+      throw new Error(
+        "This session would exceed its 512 MB decoded-audio budget. Use shorter recordings or open a smaller session.",
+      );
+    this.unloadAsset(id);
     this.assets.set(id, decoded);
+    return decoded;
   }
   unloadAsset(id: string): void {
     this.assets.delete(id);
+    for (const key of this.waveformCache.keys())
+      if (key.startsWith(id + ":")) this.waveformCache.delete(key);
   }
   hasAsset(id: string): boolean {
     return this.assets.has(id);
   }
   getWaveform(id: string, points = 80): number[] {
+    const key = id + ":" + points,
+      cached = this.waveformCache.get(key);
+    if (cached) return cached;
     const buffer = this.assets.get(id);
     if (!buffer) return [];
-    const data = buffer.getChannelData(0);
-    const size = Math.max(1, Math.floor(data.length / points));
-    return Array.from({ length: points }, (_, i) => {
+    const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) =>
+      buffer.getChannelData(i),
+    );
+    const size = Math.max(1, Math.ceil(buffer.length / points));
+    const result = Array.from({ length: points }, (_, i) => {
       let peak = 0;
-      for (let j = i * size; j < Math.min(data.length, (i + 1) * size); j++)
-        peak = Math.max(peak, Math.abs(data[j]));
+      for (let j = i * size; j < Math.min(buffer.length, (i + 1) * size); j++)
+        for (const data of channels) peak = Math.max(peak, Math.abs(data[j]));
       return peak;
     });
+    this.waveformCache.set(key, result);
+    return result;
   }
 
   async previewAsset(id: string): Promise<void> {
@@ -639,6 +741,11 @@ export class StudioAudioEngine {
     project: Project,
     onProgress?: (value: number) => void,
   ): Promise<Blob> {
+    project = compositionProject(project);
+    if (!project.tracks.some((track) => track.clips.length))
+      throw new Error(
+        "Add a composition clip before exporting. Reference tracks are excluded from WAV exports.",
+      );
     const events = collectEvents(project);
     for (const event of events)
       if (
@@ -745,6 +852,10 @@ export class StudioAudioEngine {
     this.structure = "";
     this.transportConfig = "";
     this.assets.clear();
+    this.waveformCache.clear();
+    this.trackAnalysers.forEach((node) => node.disconnect());
+    this.trackAnalysers.clear();
+    this.referenceMode = "both";
   }
 
   private readTick(): number {
@@ -774,6 +885,8 @@ export class StudioAudioEngine {
     for (const [id, graph] of this.tracks)
       if (!project.tracks.some((track) => track.id === id)) {
         graph.dispose();
+        this.trackAnalysers.get(id)?.disconnect();
+        this.trackAnalysers.delete(id);
         this.tracks.delete(id);
       }
     for (const track of project.tracks) {
@@ -783,10 +896,14 @@ export class StudioAudioEngine {
           this.context,
           this.bus,
           track,
-          isTrackAudible(project, track.id),
+          isTrackAudible(project, track.id, this.referenceMode),
         );
         this.tracks.set(track.id, graph);
-      } else graph.update(track, isTrackAudible(project, track.id));
+      } else
+        graph.update(
+          track,
+          isTrackAudible(project, track.id, this.referenceMode),
+        );
     }
   }
   /** Everything that decides which events exist and when. Tempo and instrument settings are

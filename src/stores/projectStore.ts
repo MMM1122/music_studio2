@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createDemoProject } from "../domain/factories";
 import type { Project } from "../domain/models";
 import { validateProject } from "../domain/validation";
+import { rescaleReferenceClips } from "../domain/reference";
 
 interface HistoryEntry {
   project: Project;
@@ -65,6 +66,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     set((state) => {
       const draft = structuredClone(state.project);
       mutator(draft);
+      rescaleReferenceClips(draft, state.project.transport.bpm);
       if (JSON.stringify(draft) === JSON.stringify(state.project)) return state;
       draft.updatedAt = new Date().toISOString();
       const now = Date.now();

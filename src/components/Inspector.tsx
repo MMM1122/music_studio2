@@ -82,6 +82,13 @@ export function Inspector({ onClose }: { onClose: () => void }) {
               TRACK {String(trackIndex + 1).padStart(2, "0")}
             </span>
           </div>
+          {track.role === "reference" && (
+            <p className="library-footnote">
+              REFERENCE · Keeps its original speed and seconds when BPM changes.
+              Excluded from WAV export. Open Audio Analysis in the clip editor
+              for markers and tempo.
+            </p>
+          )}
           <input
             className="track-title-input"
             aria-label="Track name"

@@ -51,6 +51,37 @@ const instrumentSchema = z.object({
   release: z.number().min(0).max(30),
   brightness: unit,
 });
+const referenceSchema = z
+  .object({
+    markers: z
+      .array(
+        z.object({
+          id,
+          label: z.string().trim().min(1).max(120),
+          timeSeconds: z.number().min(0).max(86400),
+        }),
+      )
+      .max(500),
+    tempo: z
+      .object({
+        bpm: z.number().min(30).max(300),
+        confidence: unit,
+        alternatives: z.array(z.number().min(30).max(300)).max(8),
+        analyzedSeconds: z.number().positive().max(86400),
+      })
+      .optional(),
+    manualBpm: z.number().min(30).max(300).optional(),
+  })
+  .superRefine((reference, ctx) => {
+    if (
+      new Set(reference.markers.map((marker) => marker.id)).size !==
+      reference.markers.length
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Reference marker IDs must be unique within a track.",
+      });
+  });
 const clipBase = {
   id,
   name: z.string().max(300),
@@ -95,6 +126,8 @@ export const projectSchema = z
           id,
           name: z.string().max(300),
           type: z.enum(["midi", "drums", "audio"]),
+          role: z.literal("reference").optional(),
+          reference: referenceSchema.optional(),
           color: z.enum(["clay", "slate", "mauve", "sage", "taupe"]),
           instrument: instrumentSchema,
           mixer: z.object({
@@ -142,6 +175,30 @@ export const projectSchema = z
           message: "Pattern keys must match their IDs.",
         });
     for (const track of project.tracks) {
+      if (
+        track.role === "reference" &&
+        (track.type !== "audio" ||
+          track.clips.some((clip) => clip.type !== "audio"))
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Reference tracks must contain only audio clips.",
+        });
+      if (
+        track.role === "reference" &&
+        new Set(
+          track.clips.filter((c) => c.type === "audio").map((c) => c.assetId),
+        ).size > 1
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Each reference track must use one source recording.",
+        });
+      if (track.reference && track.role !== "reference")
+        ctx.addIssue({
+          code: "custom",
+          message: "Reference analysis requires a reference track.",
+        });
       if (trackIds.has(track.id))
         ctx.addIssue({ code: "custom", message: "Track IDs must be unique." });
       trackIds.add(track.id);
