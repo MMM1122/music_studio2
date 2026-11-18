@@ -5,6 +5,10 @@ import { engine } from "./audio/engine";
 import { App } from "./app/App";
 import "./themes/tokens.css";
 import "./themes/app.css";
+import { inject } from "@vercel/analytics";
+
+// Vercel Web Analytics: cookieless page views, production builds only.
+if (import.meta.env.PROD) inject({ mode: "production" });
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary onError={() => engine.stop()}>
