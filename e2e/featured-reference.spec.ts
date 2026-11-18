@@ -18,10 +18,9 @@ test("the featured song loads as a reference track in one click and survives a r
 
   await page.getByRole("button", { name: "Samples", exact: true }).click();
   const card = page.getByLabel("Featured reference song");
-  await expect(card).toContainText("感官浮游 (Live)");
-  await expect(card).toContainText("周笔畅");
+  await expect(card).toContainText("Sensory Drift");
   await page
-    .getByRole("button", { name: "Load 感官浮游 (Live) as a reference track" })
+    .getByRole("button", { name: "Load Sensory Drift as a reference track" })
     .click();
   await expect(page.getByLabel("Reference track analysis")).toBeVisible({
     timeout: 30_000,
@@ -31,7 +30,7 @@ test("the featured song loads as a reference track in one click and survives a r
   expect(p.tracks).toHaveLength(tracksBefore + 1);
   const reference = p.tracks[0];
   expect(reference.role).toBe("reference");
-  expect(reference.name).toBe("感官浮游 (Live)");
+  expect(reference.name).toBe("Sensory Drift");
   const asset = p.assets.find((a) => a.id === "featured-sensory-drift")!;
   // Timed from the decoded audio, not a guess: 3 min 28 s.
   expect(asset.duration).toBeGreaterThan(207);
@@ -71,6 +70,6 @@ test("the featured song loads as a reference track in one click and survives a r
   await page.waitForFunction("!!window.__studioTest");
   const reloaded = await project(page);
   expect(reloaded.tracks[0].role).toBe("reference");
-  expect(reloaded.tracks[0].name).toBe("感官浮游 (Live)");
+  expect(reloaded.tracks[0].name).toBe("Sensory Drift");
   expect(errors).toEqual([]);
 });
