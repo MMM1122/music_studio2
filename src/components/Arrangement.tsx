@@ -11,6 +11,7 @@ import {
   AudioLines,
   Drum,
   Minus,
+  FoldHorizontal,
 } from "lucide-react";
 import {
   BAR,
@@ -33,6 +34,9 @@ interface Props {
   onOpenEditor: () => void;
   onInspector: () => void;
 }
+/** Narrowest bar, in pixels, that zooming out or fitting a long song may reach. */
+const MIN_BAR_WIDTH = 12;
+
 export function Arrangement({
   onSeek,
   onAddTrack,
@@ -87,6 +91,26 @@ export function Arrangement({
     ) + 2,
   );
   const pp = barWidth / BAR;
+  const lanes = useRef<HTMLDivElement>(null);
+  /** Zooms so the whole song (every clip, or the loop when there are none) fits the lanes. */
+  function fitToWindow() {
+    const scroller = lanes.current;
+    if (!scroller) return;
+    const end = Math.max(
+      BAR,
+      ...tracks.flatMap((t) =>
+        t.clips.map((c) => c.startTick + c.durationTicks),
+      ),
+      tracks.some((t) => t.clips.length) ? 0 : loopEnd,
+    );
+    const header =
+      scroller.querySelector<HTMLElement>(".track-column")?.offsetWidth ?? 168;
+    const width = scroller.clientWidth - header - 12;
+    setBarWidth(
+      Math.max(MIN_BAR_WIDTH, Math.min(180, Math.floor((width * BAR) / end))),
+    );
+    scroller.scrollLeft = 0;
+  }
   const editTrack = (
     trackId: string,
     fn: (t: Track) => void,
@@ -218,7 +242,7 @@ export function Arrangement({
           <button
             className="icon-button"
             title="Zoom out timeline"
-            onClick={() => setBarWidth(Math.max(32, barWidth - 10))}
+            onClick={() => setBarWidth(Math.max(MIN_BAR_WIDTH, barWidth - 10))}
           >
             <Minus />
           </button>
@@ -231,6 +255,14 @@ export function Arrangement({
             onClick={() => setBarWidth(Math.min(180, barWidth + 10))}
           >
             <Plus />
+          </button>
+          <button
+            className="icon-button"
+            title="Fit the whole song in the window"
+            aria-label="Fit song to window"
+            onClick={fitToWindow}
+          >
+            <FoldHorizontal />
           </button>
           <button
             className="icon-button"
@@ -272,7 +304,7 @@ export function Arrangement({
           </span>
         </div>
       )}
-      <div className="timeline-scroll">
+      <div className="timeline-scroll" ref={lanes}>
         <div
           className="timeline-content"
           style={{ width: 168 + bars * barWidth }}
@@ -508,7 +540,6 @@ export function Arrangement({
             <button className="track-column add-track" onClick={onAddTrack}>
               <Plus size={14} /> Add track
             </button>
-            <span>Make room for another sound.</span>
           </div>
           <TimelinePlayhead pixelsPerTick={pp} />
         </div>

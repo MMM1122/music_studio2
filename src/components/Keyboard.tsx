@@ -152,10 +152,6 @@ export function Keyboard({ octaves = 2, musicalKey, drums }: KeyboardProps) {
             ))}
         </div>
       )}
-      <div className="keyboard-caption">
-        <span>PLAY SOMETHING</span>
-        <small>Every idea starts with a note.</small>
-      </div>
     </div>
   );
 }

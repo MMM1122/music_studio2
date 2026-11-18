@@ -639,3 +639,27 @@
     font-size: 11px;
   }
 }
+
+/* One-line heading, matching the Studio, so the tools start higher on the page. */
+.math-lab .lab-heading {
+  padding: 10px 24px;
+  flex-shrink: 0;
+}
+.math-lab .lab-heading h1 {
+  font-size: 26px;
+  margin: 0;
+  white-space: nowrap;
+  flex: 1;
+}
+.math-lab .lab-heading .session-artwork {
+  width: 120px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.math-lab .lab-heading .session-artwork svg {
+  width: 120px;
+  height: 34px;
+}
+.math-lab .lab-heading .session-artwork figcaption {
+  display: none;
+}

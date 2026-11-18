@@ -344,17 +344,10 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
   return (
     <main className="workspace math-lab" aria-label="Mathematical Music Lab">
       <header className="lab-heading">
-        <div>
-          <span className="eyebrow">EXPERIMENT / LISTEN / COMPOSE</span>
-          <h1>
-            Mathematical <em>Music Lab.</em>
-          </h1>
-          <p>
-            Find a phrase in a curve. A voice in its harmonics. A new direction
-            in probability.
-          </p>
-        </div>
-        <SessionArtwork large />
+        <h1>
+          Mathematical <em>Music Lab.</em>
+        </h1>
+        <SessionArtwork />
         <button
           className="button small"
           onClick={() => {

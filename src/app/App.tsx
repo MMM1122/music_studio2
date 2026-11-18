@@ -840,14 +840,6 @@ export function App() {
             <span>New session</span>
           </button>
           <div className="sidebar-bottom">
-            <div className="quiet-note">
-              <span>
-                Room for
-                <br />
-                your own sound.
-              </span>
-              <div className="quiet-line" />
-            </div>
             <button
               className="nav-item"
               title="Keyboard shortcuts"
@@ -856,7 +848,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.7</div>
+            <div className="version-label">STUDIO / V.1.7.1</div>
           </div>
         </nav>
         {workspace === "math" ? (
@@ -1219,7 +1211,7 @@ export function App() {
                 <span className={`audio-status ${audioReady ? "ready" : ""}`} />
                 {audioReady
                   ? "Audio engine ready"
-                  : "Press play to bring it to life"}
+                  : "Audio starts when you press Play"}
               </span>
               <span className="footer-hint">
                 SPACE <span>Play / Pause</span>
