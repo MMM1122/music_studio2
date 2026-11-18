@@ -45,6 +45,7 @@ import {
   ROOTS,
 } from "./math/MathLabControls";
 import { CurveEditor } from "./math/CurveEditor";
+import { NumberField } from "./NumberField";
 import { curvePattern } from "../math/curve";
 import { SessionArtwork } from "./SessionArtwork";
 import "../themes/math-lab.css";
@@ -611,20 +612,13 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
                   </label>
                   <label>
                     Preview BPM
-                    <input
-                      aria-label="Function BPM"
-                      type="number"
+                    <NumberField
+                      label="Function BPM"
                       min={30}
                       max={300}
+                      step={1}
                       value={lab.functionSettings.bpm}
-                      onChange={(e) =>
-                        updateFunction({
-                          bpm: Math.max(
-                            30,
-                            Math.min(300, +e.target.value || 80),
-                          ),
-                        })
-                      }
+                      onChange={(bpm) => updateFunction({ bpm })}
                     />
                   </label>
                 </div>
@@ -1065,20 +1059,15 @@ export function MathLab({ onAdd, onApplyInstrument, onStudio, notify }: Props) {
                 </label>
                 <label>
                   Preview BPM
-                  <input
-                    aria-label="Bayesian BPM"
-                    type="number"
+                  <NumberField
+                    label="Bayesian BPM"
                     min={30}
                     max={300}
+                    step={1}
                     value={lab.bayesBpm}
-                    onChange={(e) => {
+                    onChange={(bayesBpm) => {
                       stop();
-                      patch({
-                        bayesBpm: Math.max(
-                          30,
-                          Math.min(300, +e.target.value || 80),
-                        ),
-                      });
+                      patch({ bayesBpm });
                     }}
                   />
                 </label>

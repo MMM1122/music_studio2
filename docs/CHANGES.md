@@ -1,5 +1,15 @@
 # STUDIO release notes
 
+## Version 1.6 — Play it in
+
+- **Typed tempos stick.** The BPM field clamped on every keystroke, so typing 120 over 86 produced 240 (the "1" became 40, then "401" became 240), and clearing the field jumped to 40. The field now keeps what you type, applies a value as soon as it is in range, clamps only on Enter or leaving the field, restores the previous tempo on Escape or an empty entry, and records one undo step per edit. The same fix covers the Math Lab Function and Bayesian BPM fields, loop start/end bars, clip start/length, audio trim start, and attack/release.
+- **Play notes from the computer keyboard.** A–L play the selected track (white keys on the home row, sharps on W E T Y U O P), Z/X change octave, and on a drum track A S D F G H play kick, snare, hats, clap and percussion. Notes sound for as long as the key is held. Keys are ignored while typing in a field, in dialogs and in Math Lab; **Keys off** in the footer turns the layout off.
+- **MIDI keyboards.** **MIDI** in the footer connects every MIDI input the browser exposes (Chrome and Edge). Velocity is used; note-on with velocity 0 counts as release.
+- **Record.** Arm **Record** (or press R), press Play and play. When playback stops, the take is written as one undoable edit: notes are quantized to 1/16 at their start and keep their held length; notes inside an existing clip are overdubbed into its pattern (wrapped for looping clips), others become new bar-aligned "Recorded take" clips. Timing is corrected for the browser's reported output latency.
+- **Metronome.** A click on every beat, accented on the downbeat, on the shared transport. It is never included in WAV exports.
+- **Track meters.** Each track header shows its own post-fader level.
+- The on-screen keyboard now holds notes while pressed, follows the same octave as the computer keys, lights keys played from any source, and shows drum pads for drum tracks. With a reference or audio track selected, notes go to the first instrument track so you can play along with a reference song.
+
 ## Version 1.5 — Reference, analyze, compose
 
 - Added **Samples → Import Reference** through the existing importer, IndexedDB assets and audio engine. Full-song reference tracks appear above composition tracks, with original-speed playback and distinct labels.

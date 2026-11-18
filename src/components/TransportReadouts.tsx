@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { engine } from "../audio/engine";
 import { formatPosition } from "../domain/timing";
 import { useTransportDraw, useTransportStore } from "../stores/transportStore";
 
@@ -52,6 +53,29 @@ export function TimelinePlayhead({ pixelsPerTick }: { pixelsPerTick: number }) {
   return (
     <div className="timeline-playhead" ref={line}>
       <i />
+    </div>
+  );
+}
+
+/** A track's own post-fader level: rises at once, falls slowly, so short hits stay visible. */
+export function TrackMeter({ trackId }: { trackId: string }) {
+  const bar = useRef<HTMLElement>(null);
+  const shown = useRef(0);
+  useTransportDraw(
+    (readings) => {
+      const idle =
+        !readings.playing && !readings.previewing && readings.level === 0;
+      shown.current = idle
+        ? 0
+        : Math.max(engine.getTrackLevel(trackId), shown.current * 0.86);
+      if (bar.current)
+        bar.current.style.transform = `scaleX(${Math.min(1, shown.current * 1.5).toFixed(3)})`;
+    },
+    [trackId],
+  );
+  return (
+    <div className="track-meter" aria-hidden="true">
+      <i ref={bar} />
     </div>
   );
 }

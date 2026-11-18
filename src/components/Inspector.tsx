@@ -8,6 +8,7 @@ import {
   type InstrumentType,
 } from "../domain/models";
 import { useProjectStore } from "../stores/projectStore";
+import { NumberField } from "./NumberField";
 import { useMathLabStore } from "../stores/mathLabStore";
 export function Inspector({ onClose }: { onClose: () => void }) {
   const savedPresets = useMathLabStore((state) => state.savedPresets);
@@ -221,38 +222,31 @@ export function Inspector({ onClose }: { onClose: () => void }) {
               <div className="two-fields">
                 <label className="field-label">
                   Attack (s)
-                  <input
-                    aria-label="Attack"
-                    type="number"
-                    min="0.001"
-                    max="2"
-                    step="0.01"
+                  <NumberField
+                    label="Attack"
+                    min={0.001}
+                    max={2}
+                    step={0.01}
+                    precision={3}
                     value={track.instrument.attack}
-                    onChange={(e) =>
+                    onChange={(attack) =>
                       change("Set attack", (t) => {
-                        t.instrument.attack = Math.min(
-                          2,
-                          Math.max(0.001, +e.target.value),
-                        );
+                        t.instrument.attack = attack;
                       })
                     }
                   />
                 </label>
                 <label className="field-label">
                   Release (s)
-                  <input
-                    aria-label="Release"
-                    type="number"
-                    min="0.01"
-                    max="2"
-                    step="0.05"
+                  <NumberField
+                    label="Release"
+                    min={0.01}
+                    max={2}
+                    step={0.05}
                     value={track.instrument.release}
-                    onChange={(e) =>
+                    onChange={(release) =>
                       change("Set release", (t) => {
-                        t.instrument.release = Math.min(
-                          2,
-                          Math.max(0.01, +e.target.value),
-                        );
+                        t.instrument.release = release;
                       })
                     }
                   />
@@ -312,32 +306,34 @@ export function Inspector({ onClose }: { onClose: () => void }) {
               <div className="two-fields">
                 <label className="field-label">
                   Start (bar)
-                  <input
-                    aria-label="Clip start bar"
-                    type="number"
-                    min="1"
-                    step="0.25"
+                  <NumberField
+                    label="Clip start bar"
+                    min={1}
+                    max={4096}
+                    step={0.25}
+                    precision={4}
                     value={clip.startTick / BAR + 1}
-                    onChange={(e) =>
+                    onChange={(bar) =>
                       clipChange(
                         "startTick",
-                        Math.max(0, Math.round((+e.target.value - 1) * BAR)),
+                        Math.max(0, Math.round((bar - 1) * BAR)),
                       )
                     }
                   />
                 </label>
                 <label className="field-label">
                   Length (bars)
-                  <input
-                    aria-label="Clip length bars"
-                    type="number"
-                    min="0.25"
-                    step="0.25"
+                  <NumberField
+                    label="Clip length bars"
+                    min={0.25}
+                    max={4096}
+                    step={0.25}
+                    precision={4}
                     value={clip.durationTicks / BAR}
-                    onChange={(e) =>
+                    onChange={(bars) =>
                       clipChange(
                         "durationTicks",
-                        Math.max(480, Math.round(+e.target.value * BAR)),
+                        Math.max(480, Math.round(bars * BAR)),
                       )
                     }
                   />
@@ -360,21 +356,13 @@ export function Inspector({ onClose }: { onClose: () => void }) {
               {clip.type === "audio" && (
                 <label className="field-label">
                   Trim start (seconds)
-                  <input
-                    aria-label="Audio trim start"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                  <NumberField
+                    label="Audio trim start"
+                    min={0}
+                    max={Math.max(0, (clipAssetDuration ?? 1) - 0.01)}
+                    step={0.01}
                     value={clip.offsetSeconds}
-                    onChange={(e) =>
-                      clipChange(
-                        "offsetSeconds",
-                        Math.min(
-                          (clipAssetDuration ?? 1) - 0.01,
-                          Math.max(0, +e.target.value),
-                        ),
-                      )
-                    }
+                    onChange={(seconds) => clipChange("offsetSeconds", seconds)}
                   />
                 </label>
               )}

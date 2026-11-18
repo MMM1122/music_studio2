@@ -65,12 +65,16 @@ Browser tests use installed Google Chrome locally and bundled Playwright Chromiu
 2. Set the project title, BPM, and musical key in the transport. Key selection highlights the scale and informs new ideas; it never transposes your existing notes.
 3. Choose **Add track → Drum Kit**. Toggle the 16 drum steps, set swing, and Alt-click a hit to change its velocity. The editor's Play button previews the pattern in a continuous native-audio loop. Stop preview before returning to the arrangement.
 4. Add **Electric Piano**. Click the piano grid to draw notes. Drag notes in time or pitch, drag their right edge to change duration, and Shift-click or Shift-drag to select multiple notes. Use the snap menu, quantize button, and velocity slider. The chord menu lists the seventh chords that belong to the project key (i · Cm7, iv · Fm7, V · G7…) and inserts them in the voicing you choose: close, open, rootless, or shell. Right-click a note to delete it. Scale rows and note names follow the key, so C minor shows E♭ and B♭ rather than D♯ and A♯.
-5. Add **Felt Piano**, **Synth Bass**, **Sub Bass**, **Synth Pad**, **Lead Synth**, or **Pluck** for more voices. Each preset starts with a level, reverb, and delay chosen to sit with the others. The optional bottom keyboard auditions notes without recording them.
+5. Add **Felt Piano**, **Synth Bass**, **Sub Bass**, **Synth Pad**, **Lead Synth**, or **Pluck** for more voices. Each preset starts with a level, reverb, and delay chosen to sit with the others. The bottom keyboard, the computer keys A–L (Z/X for octave) and a connected MIDI keyboard (**MIDI** in the footer) all play the selected track for as long as you hold a note.
 6. Arrange clips by dragging them along the timeline. Drag a clip's right edge to trim or extend it. A clip with **Loop source** enabled repeats its source pattern; otherwise an extended clip plays the pattern once and then remains silent. Double-click empty MIDI/drum lanes to create clips.
 7. **New** creates a pattern independently of the song. **Insert into song** places it at the playhead. Duplicated clips share the original pattern; use **Inspector → Make independent** before editing a separate variation.
 8. Use track **M**/**S**, volume, and Inspector pan, instrument parameters, reverb, delay, and low-pass filter to mix. Reverb and delay are sends into one shared room and one tempo-synced ping-pong delay, so tracks sound like they share a space. Edits made while the song plays take effect without stopping it. Settings contains the arrangement loop start/end; the ruler seeks the playhead.
 9. Open **Samples** to preview six original WAV sounds or import WAV/MP3/other browser-decodable audio. Add a sample to an audio track, then trim its source start, set its gain, move it, or loop it. The arrangement shows its actual source waveform.
 10. Open **AI Ideas** for three local, editable alternatives. Basslines, melodies, and chord voicings read the chords already in your song at the playhead and follow them (the description says "Follows Cm9 · A♭maj9 · …"); in an empty project they suggest the key's own progression instead. Drum ideas are two-bar grooves with ghost notes and a turnaround, chosen for the tempo. Rhythm variations and phrase continuations work from the selected clip. Preview an idea and choose **Use idea** to add a separate track. Your original notes stay intact.
+
+## Play and record
+
+Arm **Record** (or press R), press **Play**, and play on the computer keys, the on-screen keyboard or a MIDI keyboard. When you stop, the take is added as one undoable edit: notes are quantized to 1/16th, keep their held length, and go into the clip under them or a new "Recorded take" clip. The **Metronome** button adds a click on every beat; it is never exported. With a reference song selected, notes go to your first instrument track so you can play along.
 
 ## Save and reopen
 
@@ -101,6 +105,7 @@ The moon/sun button switches between exactly two themes: **Gallery Light** (defa
 - **⌘/Ctrl C/V/D**: copy/paste/duplicate notes in the focused piano editor, or selected clips elsewhere.
 - **Delete/Backspace**: delete selected notes in the editor, or a selected clip elsewhere.
 - **⌘/Ctrl S**: save. **Escape**: clear note selection or close a panel.
+- **A–L** (with W E T Y U O P for sharps): play notes; **Z/X**: octave down/up; **R**: arm recording.
 - Arrow keys nudge selected notes; Shift+Up/Down moves an octave.
 
 Shortcuts leave text inputs alone. Editing is desktop-first; narrow windows collapse navigation and allow panel/timeline scrolling.
@@ -116,4 +121,4 @@ The application works without external AI. `src/ai/provider.ts` defines a provid
 - [Verified behavior and limitations](docs/VERIFICATION.md)
 - [Original sample provenance](public/samples/README.md)
 
-The MVP has real editing, realtime sound, offline rendering, local project storage, sample import, and local inspiration. It is not a replacement for a professional desktop DAW: recording, MIDI hardware, audio time-stretch, arbitrary time signatures, automation lanes, and cloud collaboration are future work.
+The MVP has real editing, realtime sound, offline rendering, local project storage, sample import, and local inspiration. It is not a replacement for a professional desktop DAW: audio recording, audio time-stretch, arbitrary time signatures, automation lanes, and cloud collaboration are future work.
