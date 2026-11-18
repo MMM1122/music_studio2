@@ -65,7 +65,7 @@
   letter-spacing: -0.12px;
 }
 .project-identity > span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   display: flex;
   gap: 5px;
@@ -127,7 +127,7 @@
   appearance: none;
 }
 .bpm-control > span {
-  font-size: 8px;
+  font-size: 10px;
   color: var(--color-text-secondary);
   letter-spacing: 1.1px;
 }
@@ -178,7 +178,7 @@
   margin-bottom: 23px;
 }
 .sidebar-top .tiny {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1.45px;
 }
 .sidebar-top .icon-button {
@@ -219,7 +219,7 @@
 }
 .local-tag {
   margin-left: auto;
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.65px;
   color: var(--color-text-muted);
 }
@@ -257,12 +257,12 @@
   margin-top: 22px;
 }
 .sidebar-bottom .nav-item {
-  font-size: 10px;
+  font-size: 11px;
   padding: 0 9px;
   gap: 8px;
 }
 .version-label {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1.65px;
   color: var(--color-text-muted);
   padding: 18px 12px 0;
@@ -313,7 +313,7 @@
   position: relative;
 }
 .eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1.8px;
   color: var(--color-text-secondary);
   font-weight: 500;
@@ -334,7 +334,7 @@ h1 em {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
@@ -345,7 +345,7 @@ h1 em {
   background: var(--color-sage);
 }
 .session-meta > button {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-primary);
   gap: 3px;
   padding: 3px 0;
@@ -371,7 +371,7 @@ h1 em {
   letter-spacing: -0.1px;
 }
 .section-index {
-  font-size: 9px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
   margin-right: 3px;
@@ -380,7 +380,7 @@ h1 em {
 }
 .section-title .tag {
   margin-left: 4px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
   padding: 2px 6px;
   background: var(--color-surface);
@@ -401,7 +401,7 @@ h1 em {
   height: 14px;
 }
 .zoom-value {
-  font-size: 10px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
   min-width: 34px;
@@ -437,7 +437,7 @@ h1 em {
   align-items: flex-end;
   justify-content: space-between;
   padding: 0 16px 8px;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
@@ -468,14 +468,14 @@ h1 em {
   position: absolute;
   right: 7px;
   top: 1px;
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 1px;
   color: var(--color-text-secondary);
 }
 .bar-number {
   position: absolute;
   top: 23px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   padding-left: 9px;
   font-variant-numeric: tabular-nums;
@@ -513,7 +513,7 @@ h1 em {
   background: var(--track-color);
 }
 .track-number {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-muted);
   margin-right: 2px;
   font-variant-numeric: tabular-nums;
@@ -535,7 +535,7 @@ h1 em {
   margin: 9px 0 0 19px;
 }
 .track-controls > button {
-  font-size: 9px;
+  font-size: 11px;
   border: 1px solid var(--color-border);
   height: 18px;
   width: 19px;
@@ -633,7 +633,7 @@ h1 em {
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   gap: 6px;
   color: var(--color-text-primary);
@@ -679,13 +679,13 @@ h1 em {
   color: var(--color-text-secondary);
 }
 .audio-miniature span {
-  font-size: 8px;
+  font-size: 10px;
 }
 .lane-hint {
   position: absolute;
   left: 20px;
   top: 31px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-muted);
 }
 .add-track-row {
@@ -698,12 +698,12 @@ h1 em {
   height: 37px;
   justify-content: flex-start;
   padding: 0 19px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   border-radius: 0;
 }
 .add-track-row > span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-muted);
   padding-left: 18px;
   font-style: italic;
@@ -734,7 +734,7 @@ h1 em {
   justify-content: space-between;
   gap: 10px;
   padding: 9px 24px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   border-top: 1px solid var(--color-border);
   min-height: 30px;
@@ -758,7 +758,7 @@ h1 em {
   gap: 8px;
 }
 .editor-track-tag {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   font-weight: 400;
   display: flex;
@@ -789,7 +789,7 @@ h1 em {
   background: var(--color-surface-elevated);
 }
 .pattern-toolbar .button {
-  font-size: 9px;
+  font-size: 11px;
   padding: 4px 7px;
 }
 .pattern-toolbar .button svg {
@@ -800,12 +800,12 @@ h1 em {
   display: flex;
   gap: 5px;
   align-items: center;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   margin-left: auto;
 }
 .pattern-length select {
-  font-size: 9px;
+  font-size: 11px;
   padding: 3px 5px;
 }
 .audio-clip-editor {
@@ -837,7 +837,7 @@ h1 em {
   padding: 9px 24px;
   border-top: 1px solid var(--color-border);
   margin-top: auto;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   flex-shrink: 0;
   position: sticky;
@@ -925,7 +925,7 @@ h1 em {
   margin-bottom: 9px;
 }
 .inspector-heading .tiny {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1px;
 }
 .track-swatch {
@@ -945,7 +945,7 @@ h1 em {
   letter-spacing: -0.35px;
 }
 .field-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   display: flex;
   flex-direction: column;
@@ -964,7 +964,7 @@ h1 em {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   line-height: 1.6;
   margin: 10px 0 13px;
@@ -990,7 +990,7 @@ h1 em {
   justify-content: space-between;
 }
 .inspector-section h4 .tiny {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 400;
   color: var(--color-text-muted);
 }
@@ -998,7 +998,7 @@ h1 em {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  font-size: 10px;
+  font-size: 11px;
   margin-bottom: 20px;
   color: var(--color-text-secondary);
 }
@@ -1010,7 +1010,7 @@ h1 em {
 .range-field output {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
-  font-size: 10px;
+  font-size: 11px;
 }
 .range-field input {
   height: 3px;
@@ -1026,7 +1026,7 @@ h1 em {
 .segmented > button {
   flex: 1;
   padding: 5px;
-  font-size: 9px;
+  font-size: 11px;
   border-radius: 2px;
   color: var(--color-text-secondary);
 }
@@ -1043,19 +1043,19 @@ h1 em {
   margin-bottom: 0;
 }
 .two-fields .field-label > input {
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px;
 }
 .check-field {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   margin: 15px 0 20px;
 }
 .inspector-content > .button {
-  font-size: 9px;
+  font-size: 11px;
   width: 100%;
 }
 .modal-backdrop {
@@ -1137,7 +1137,7 @@ h1 em {
 }
 .instrument-list > button > div > span {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 .instrument-list > button > svg {
@@ -1162,7 +1162,7 @@ h1 em {
   font-size: 12px;
 }
 .library-search .button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .filter-tabs {
   display: flex;
@@ -1171,7 +1171,7 @@ h1 em {
   margin: 21px 0 27px;
 }
 .filter-tabs > button {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   padding: 5px 8px;
 }
@@ -1182,7 +1182,7 @@ h1 em {
 .library-caption {
   display: flex;
   justify-content: space-between;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1px;
   color: var(--color-text-muted);
   padding-bottom: 12px;
@@ -1218,7 +1218,7 @@ h1 em {
 .sample-item > div > span {
   display: flex;
   gap: 7px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 .sample-item i {
@@ -1231,10 +1231,10 @@ h1 em {
   margin-right: 20px;
 }
 .sample-item > .button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .library-footnote {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--color-text-muted);
   margin: 22px 0 0;
@@ -1292,7 +1292,7 @@ h1 em {
   font-weight: 500;
 }
 .idea-item p {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
   color: var(--color-text-secondary);
   max-width: 360px;
@@ -1305,7 +1305,7 @@ h1 em {
   flex-shrink: 0;
 }
 .idea-item .tag {
-  font-size: 8px;
+  font-size: 10px;
 }
 .new-project-form {
   display: flex;
@@ -1349,7 +1349,7 @@ h1 em {
 }
 .project-item > button > div > span {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   margin-top: 5px;
 }
@@ -1359,7 +1359,7 @@ h1 em {
 .delete-confirm {
   display: flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .project-tools {
   display: flex;
@@ -1368,7 +1368,7 @@ h1 em {
   margin: 24px 27px 0;
 }
 .project-tools > .button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .project-tools + .library-footnote {
   margin: 17px 27px 27px;
@@ -1395,7 +1395,7 @@ h1 em {
   padding: 12px 10px;
   flex: 1;
   border: 1px solid var(--color-border);
-  font-size: 10px;
+  font-size: 11px;
 }
 .theme-options > button.selected {
   background: var(--color-surface);
@@ -1431,7 +1431,7 @@ h1 em {
   border-bottom: 1px solid var(--color-border);
   padding: 16px 0;
   margin-top: 28px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 .export-summary > .button {
@@ -1479,7 +1479,7 @@ h1 em {
   justify-content: space-between;
   gap: 10px;
   padding: 7px 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 .shortcut-list kbd {
@@ -1527,7 +1527,7 @@ h1 em {
 }
 .heading-subtitle {
   margin: 7px 0 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   letter-spacing: 0.12px;
 }
@@ -1547,7 +1547,7 @@ h1 em {
 .heading-details > button {
   padding: 0;
   justify-content: flex-start;
-  font-size: 10px;
+  font-size: 11px;
   gap: 6px;
   color: var(--color-text-secondary);
 }
@@ -1576,7 +1576,7 @@ h1 em {
   bottom: 0;
   width: 100%;
   text-align: center;
-  font-size: 7px;
+  font-size: 10px;
   color: var(--color-text-muted);
   letter-spacing: 1.8px;
 }
@@ -1600,7 +1600,7 @@ h1 em {
   opacity: 0.6;
 }
 .inspector-heading .tiny {
-  font-size: 9px;
+  font-size: 11px;
 }
 .range-field input {
   accent-color: color-mix(in srgb, var(--track-color) 55%, var(--color-accent));
@@ -1612,16 +1612,16 @@ h1 em {
   border-top-color: var(--color-border);
 }
 .inspector-section h4 .tiny {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1px;
 }
 .segmented > button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px;
 }
 .library-caption,
 .filter-tabs > button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .project-item strong,
 .sample-item strong {
@@ -1805,7 +1805,7 @@ h1 em {
   }
   .key-select {
     max-width: 86px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .export-button {
     margin: 0 3px;
@@ -1841,7 +1841,7 @@ h1 em {
     max-width: 200px;
   }
   .arrangement-footer {
-    font-size: 8px;
+    font-size: 10px;
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -1894,7 +1894,7 @@ h1 em {
   }
   .transport-actions .export-button {
     padding: 8px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .theme-button {
     width: 27px;
@@ -1990,7 +1990,7 @@ h1 em {
   border-radius: 3px;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.3px;
   white-space: nowrap;
   max-width: 190px;
@@ -2039,7 +2039,7 @@ h1 em {
 }
 .featured-reference-label {
   display: block;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1.4px;
   color: var(--color-text-muted);
   margin-bottom: 5px;
@@ -2053,10 +2053,106 @@ h1 em {
 .featured-reference > div > span:last-child {
   display: flex;
   gap: 7px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 .featured-reference i {
   font-style: normal;
   color: var(--color-text-muted);
+}
+
+/* Studio layout: a one-line heading, then arrangement and editor sharing the window height.
+   The arrangement lanes take about half of what is left (or the height the divider was dragged
+   to) and the editor fills the rest, so the piano roll is visible without scrolling. */
+.workspace-heading.compact {
+  min-height: 0;
+  padding: 10px 24px;
+}
+.workspace-heading.compact h1 {
+  font-size: 26px;
+  margin: 0;
+  white-space: nowrap;
+}
+.workspace-heading.compact .session-artwork {
+  width: 120px;
+  height: 34px;
+}
+.workspace-heading.compact .session-artwork svg {
+  width: 120px;
+  height: 34px;
+}
+.workspace-heading.compact .session-artwork figcaption {
+  display: none;
+}
+.workspace-heading.compact .heading-details {
+  gap: 4px;
+  padding: 2px 0 2px 18px;
+}
+.workspace.editor-open .arrangement .timeline-scroll {
+  max-height: var(--timeline-height, clamp(150px, calc(50vh - 190px), 440px));
+}
+.workspace.editor-open .editor-section {
+  margin-top: 0;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.workspace.editor-open .editor-section > .piano-editor,
+.workspace.editor-open .editor-section > .drum-editor {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.workspace.editor-open .piano-editor > .roll-scroll,
+.workspace.editor-open .drum-editor > .drum-grid-scroll {
+  flex: 1 1 0;
+  height: auto;
+  max-height: none;
+  min-height: 150px;
+}
+.pane-divider {
+  flex-shrink: 0;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  touch-action: none;
+  background: var(--color-surface-elevated);
+  outline: none;
+}
+.pane-divider span {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 120ms ease;
+}
+.pane-divider:hover span,
+.pane-divider:focus-visible span {
+  background: var(--color-text-muted);
+}
+.pane-divider:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--color-text-muted);
+}
+body.is-resizing-panes {
+  cursor: row-resize;
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pane-divider span {
+    transition: none;
+  }
+}
+.project-identity > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Only the note grid gives up height; toolbars inside the editors keep theirs. */
+.workspace.editor-open .piano-editor > :not(.roll-scroll),
+.workspace.editor-open .drum-editor > :not(.drum-grid-scroll) {
+  flex-shrink: 0;
 }
