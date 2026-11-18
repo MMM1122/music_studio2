@@ -844,7 +844,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.5</div>
+            <div className="version-label">STUDIO / V.1.6</div>
           </div>
         </nav>
         {workspace === "math" ? (
