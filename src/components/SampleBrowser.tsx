@@ -1,6 +1,14 @@
 import { useShallow } from "zustand/react/shallow";
 import { useEffect, useRef, useState } from "react";
-import { Search, Upload, Play, Square, Plus, AudioLines } from "lucide-react";
+import {
+  Search,
+  Upload,
+  Play,
+  Square,
+  Plus,
+  AudioLines,
+  Disc3,
+} from "lucide-react";
 import { type AudioAsset, type AudioClip, uid } from "../domain/models";
 import { createTrack } from "../domain/factories";
 import { secondsToTicks } from "../domain/timing";
@@ -58,6 +66,20 @@ const STARTERS: (AudioAsset & { url: string })[] = [
     url: "samples/round-bass.wav",
   },
 ];
+/** A full song that ships with the site and loads as a reference track in one click. It is
+ * not one of the CC0 starter sounds; see public/samples/README.md. */
+export const FEATURED_REFERENCE: AudioAsset & { url: string; credit: string } =
+  {
+    id: "featured-sensory-drift",
+    name: "感官浮游 (Live)",
+    credit: "周笔畅 · 我是唱作人 第7期",
+    duration: 208.32,
+    mimeType: "audio/mpeg",
+    category: "Reference",
+    url: "samples/sensory_drift.mp3",
+  };
+const BUNDLED = [...STARTERS, FEATURED_REFERENCE];
+
 export function SampleBrowser({
   onMessage,
   onInserted,
@@ -95,11 +117,11 @@ export function SampleBrowser({
   async function blobFor(asset: AudioAsset) {
     const stored = await getAsset(asset.id);
     if (stored) return stored;
-    const starter = STARTERS.find((a) => a.id === asset.id);
+    const starter = BUNDLED.find((a) => a.id === asset.id);
     if (starter) {
-      // Starter sounds ship in /public; BASE_URL keeps the path right under any deploy folder.
+      // Bundled audio ships in /public; BASE_URL keeps the path right under any deploy folder.
       const response = await fetch(import.meta.env.BASE_URL + starter.url);
-      if (!response.ok) throw new Error("Could not load the starter sample.");
+      if (!response.ok) throw new Error(`Could not load ${starter.name}.`);
       return response.blob();
     }
     throw new Error(
@@ -220,6 +242,37 @@ export function SampleBrowser({
       if (alive.current) setBusy(false);
     }
   }
+  /** Loads the featured song as a reference track, timed from its decoded length. */
+  async function loadFeatured() {
+    setBusy(true);
+    setImportError("");
+    const projectId = useProjectStore.getState().project.id;
+    try {
+      const blob = await blobFor(FEATURED_REFERENCE);
+      const buffer = engine.hasAsset(FEATURED_REFERENCE.id)
+        ? null
+        : await engine.loadAsset(
+            FEATURED_REFERENCE.id,
+            await blob.arrayBuffer(),
+          );
+      const { url: _url, credit: _credit, ...asset } = FEATURED_REFERENCE;
+      await insert(
+        { ...asset, duration: buffer?.duration ?? asset.duration },
+        blob,
+        true,
+        projectId,
+      );
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Could not load the reference song.";
+      if (alive.current) {
+        setImportError(message);
+        onMessage(message);
+      }
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  }
   async function importFile(file: File) {
     setImportError("");
     const reject = (message: string) => {
@@ -267,7 +320,7 @@ export function SampleBrowser({
   }
   const assets = [
     ...STARTERS,
-    ...projectAssets.filter((a) => !STARTERS.some((s) => s.id === a.id)),
+    ...projectAssets.filter((a) => !BUNDLED.some((s) => s.id === a.id)),
   ].filter(
     (a) =>
       a.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -335,6 +388,35 @@ export function SampleBrowser({
         your project BPM stays unchanged. Audio is processed locally. Maximum 50
         MB per file.
       </p>
+      <div className="featured-reference" aria-label="Featured reference song">
+        <button
+          className="sample-play"
+          aria-label={`Preview ${FEATURED_REFERENCE.name}`}
+          onClick={() => void play(FEATURED_REFERENCE)}
+        >
+          {preview === FEATURED_REFERENCE.id ? (
+            <Square size={13} />
+          ) : (
+            <Play size={13} />
+          )}
+        </button>
+        <div>
+          <span className="featured-reference-label">FEATURED REFERENCE</span>
+          <strong>{FEATURED_REFERENCE.name}</strong>
+          <span>
+            {FEATURED_REFERENCE.credit} <i>·</i> 3:28
+          </span>
+        </div>
+        <button
+          className="button small"
+          disabled={busy}
+          aria-label={`Load ${FEATURED_REFERENCE.name} as a reference track`}
+          onClick={() => void loadFeatured()}
+        >
+          <Disc3 />
+          Load as reference
+        </button>
+      </div>
       <div className="filter-tabs">
         {[
           "All",
