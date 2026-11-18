@@ -15,4 +15,4 @@ Regenerate with `python3 scripts/generate-samples.py`. All samples are mono PCM1
 
 ## Featured reference song
 
-`sensory_drift.mp3` is 感官浮游 (Live) by 周笔畅, from 我是唱作人 episode 7. It is included with the rights holders' permission so visitors can load it as a reference track (Samples → Featured reference). It is **not** covered by CC0, is not part of the starter sounds, and may not be reused, redistributed or included in exported songs outside this site. Reference tracks are excluded from WAV exports.
+`sensory_drift.mp3` ("Sensory Drift") is included with permission so visitors can load it as a reference track (Samples → Featured reference). It is **not** covered by CC0, is not part of the starter sounds, and may not be reused or redistributed outside this site. Reference tracks are excluded from WAV exports.

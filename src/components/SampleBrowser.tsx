@@ -71,8 +71,8 @@ const STARTERS: (AudioAsset & { url: string })[] = [
 export const FEATURED_REFERENCE: AudioAsset & { url: string; credit: string } =
   {
     id: "featured-sensory-drift",
-    name: "感官浮游 (Live)",
-    credit: "周笔畅 · 我是唱作人 第7期",
+    name: "Sensory Drift",
+    credit: "Full song",
     duration: 208.32,
     mimeType: "audio/mpeg",
     category: "Reference",
