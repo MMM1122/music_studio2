@@ -12,6 +12,7 @@
     "format": "prettier --write src e2e docs README.md package.json vite.config.ts playwright.config.ts"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
