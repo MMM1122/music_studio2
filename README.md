@@ -94,6 +94,8 @@ Output is stereo **44.1 kHz / PCM 16-bit WAV**, with a two-second release/effect
 
 ## Deploy
 
+**Vercel (recommended).** Import this repository at vercel.com/new. `vercel.json` sets the build (`npm ci`, `npm run build`, output `dist/`), so no settings need changing. Every push to `main` then redeploys the site, and other branches get preview links. Saved projects live in each visitor's browser and belong to the site's address: before moving to a new address, use **Projects → Export complete project** on the old site and import the file on the new one.
+
 `npm run build` writes a static site to `dist/`. Asset paths are relative, so the folder can be served from a domain root or from a sub-folder such as a GitHub Pages project site without extra configuration.
 
 ## Themes and shortcuts
