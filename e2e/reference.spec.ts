@@ -236,3 +236,34 @@ test("removing the last reference restores composition monitoring; deleting its 
     )
     .toBe(false);
 });
+
+test("zoomed waveform follows the playhead during playback until navigated by hand", async ({
+  page,
+}) => {
+  await boot(page);
+  await importReference(page);
+  await page.getByLabel("Reference waveform zoom").selectOption("16");
+  const position = page.getByLabel("Reference waveform position");
+  const follow = page.getByLabel("Follow playhead");
+  await expect(follow).toBeChecked();
+  await expect(position).toHaveValue("0");
+  await page
+    .getByRole("button", { name: "Play timeline", exact: true })
+    .click();
+  await expect.poll(async () => (await audio(page)).playing).toBe(true);
+  // 12 s at 16× is a 0.75 s window, so a second of playback must page the view forward.
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .toBeGreaterThan(0.5);
+  await position.fill("0");
+  await expect(follow).not.toBeChecked();
+  await page.waitForTimeout(1200);
+  expect(Number(await position.inputValue())).toBe(0);
+  await follow.check();
+  await expect
+    .poll(async () => Number(await position.inputValue()))
+    .toBeGreaterThan(1);
+  await page
+    .getByRole("button", { name: "Pause timeline", exact: true })
+    .click();
+});
