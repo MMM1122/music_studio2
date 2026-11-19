@@ -103,6 +103,7 @@ import { SampleBrowser } from "../components/SampleBrowser";
 import { Ideas } from "../components/Ideas";
 import { LevelMeter, PositionReadout } from "../components/TransportReadouts";
 import { SessionArtwork } from "../components/SessionArtwork";
+import { OrbitScene } from "../components/OrbitScene";
 
 const MathLab = lazy(() =>
   import("../components/MathLab").then((module) => ({
@@ -170,6 +171,16 @@ export function App() {
     const stored = Number(readPreference("timeline-height"));
     return Number.isFinite(stored) && stored >= 120 ? stored : null;
   });
+  // The twin-planet scene above the arrangement; collapsed it leaves a one-line heading.
+  // Until chosen, it starts open only on windows tall enough to keep the piano roll on screen.
+  const [orbitOpen, setOrbitOpen] = useState(() => {
+    const stored = readPreference("orbit-open");
+    return stored ? stored === "1" : window.innerHeight >= 860;
+  });
+  const toggleOrbit = () => {
+    setOrbitOpen(!orbitOpen);
+    writePreference("orbit-open", orbitOpen ? "0" : "1");
+  };
   const studioPane = useRef<HTMLElement>(null);
   const changeTimelineHeight = (height: number | null) => {
     setTimelineHeight(height);
@@ -871,7 +882,7 @@ export function App() {
         ) : (
           <main
             ref={studioPane}
-            className={`workspace ${editor ? "editor-open" : ""}`}
+            className={`workspace ${editor ? "editor-open" : ""} ${orbitOpen ? "orbit-open" : ""}`}
             style={
               timelineHeight === null
                 ? undefined
@@ -880,30 +891,52 @@ export function App() {
                   } as CSSProperties)
             }
           >
-            <div className="workspace-heading compact">
+            <div
+              className={`workspace-heading ${orbitOpen ? "with-orbit" : "compact"}`}
+            >
               <div className="heading-copy">
+                {orbitOpen && (
+                  <span className="eyebrow">A SPACE FOR SOUND</span>
+                )}
                 <h1>
                   Make room for <em>your sound.</em>
                 </h1>
+                {orbitOpen && (
+                  <p className="heading-tagline">Two voices. One orbit.</p>
+                )}
               </div>
               <div className="heading-aside">
-                <SessionArtwork />
+                {orbitOpen ? <OrbitScene /> : <SessionArtwork />}
                 <div className="heading-details">
                   <div className="session-meta">
                     <span className="session-dot" /> {project.key}
                     <span>·</span>
                     {Math.round(duration)} sec
                   </div>
-                  <button
-                    onClick={() => {
-                      useMathLabStore
-                        .getState()
-                        .patch({ tab: "functions", flowStep: 1 });
-                      changeWorkspace("math");
-                    }}
-                  >
-                    Make a first phrase <ArrowUpRight size={13} />
-                  </button>
+                  <div className="heading-links">
+                    <button
+                      onClick={() => {
+                        useMathLabStore
+                          .getState()
+                          .patch({ tab: "functions", flowStep: 1 });
+                        changeWorkspace("math");
+                      }}
+                    >
+                      Make a first phrase <ArrowUpRight size={13} />
+                    </button>
+                    <button
+                      className="orbit-toggle"
+                      aria-expanded={orbitOpen}
+                      onClick={toggleOrbit}
+                    >
+                      {orbitOpen ? "Hide orbit" : "Show orbit"}{" "}
+                      {orbitOpen ? (
+                        <ChevronUp size={13} />
+                      ) : (
+                        <ChevronDown size={13} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

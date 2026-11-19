@@ -36,6 +36,10 @@ for (const [width, height] of [
 test("the split between arrangement and editor can be dragged, stepped, remembered and reset", async ({
   page,
 }) => {
+  // Measured against the plain heading; the orbit scene takes some of the lanes' room.
+  await page.addInitScript(() =>
+    localStorage.setItem("studio.orbit-open", "0"),
+  );
   await open(page, 1440, 900);
   const lanes = () => box(page, ".arrangement .timeline-scroll");
   const grid = () => box(page, ".roll-scroll");
@@ -200,4 +204,38 @@ test("the playhead passes under the track names when the timeline scrolls", asyn
   await lanes.evaluate((el) => (el.scrollLeft = 0));
   await page.waitForTimeout(150);
   expect((await header.screenshot()).equals(headerScrolled)).toBe(true);
+});
+
+test("the twin orbit opens on tall windows, follows the music and can be hidden", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await open(page, 1440, 900);
+  const scene = page.locator(".orbit-scene");
+  await expect(scene).toBeVisible();
+  await expect(scene).toHaveAttribute("data-voices", "Small hours|Round bass");
+  await expect(scene).toHaveAttribute("data-state", "rest");
+  await page.keyboard.press("Space");
+  await expect
+    .poll(async () => scene.getAttribute("data-state"), { timeout: 25_000 })
+    .not.toBe("rest");
+  await page.keyboard.press("Space");
+  const toggle = page.getByRole("button", { name: "Hide orbit" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(scene).toHaveCount(0);
+  await expect(page.locator(".workspace-heading.compact")).toBeVisible();
+  await page.reload();
+  await page.waitForFunction("!!window.__studioTest");
+  await expect(page.locator(".orbit-scene")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show orbit" }).click();
+  await expect(page.locator(".orbit-scene")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the twin orbit starts hidden on short windows", async ({ page }) => {
+  await open(page, 1280, 760);
+  await expect(page.locator(".orbit-scene")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Show orbit" })).toBeVisible();
 });

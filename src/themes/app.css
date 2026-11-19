@@ -1529,14 +1529,19 @@ h1 em {
   padding: 7px 0 7px 20px;
   border-left: 1px solid var(--color-border);
 }
-.heading-details > button {
+.heading-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.heading-links > button {
   padding: 0;
   justify-content: flex-start;
   font-size: 11px;
   gap: 6px;
   color: var(--color-text-secondary);
 }
-.heading-details > button:hover {
+.heading-links > button:hover {
   background: transparent;
   color: var(--color-text-primary);
 }
@@ -2135,4 +2140,130 @@ body.is-resizing-panes {
 .workspace.editor-open .piano-editor > :not(.roll-scroll),
 .workspace.editor-open .drum-editor > :not(.drum-grid-scroll) {
   flex-shrink: 0;
+}
+
+/* Twin resonance: an expandable heading with the two-planet scene beside the title. The scene
+   is space in either theme; only its frame and captions follow the theme. */
+.workspace-heading.with-orbit {
+  min-height: 0;
+  padding: 14px 24px;
+  align-items: stretch;
+  gap: 26px;
+}
+.workspace-heading.with-orbit .heading-copy {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 26px;
+  border-right: 1px solid var(--color-border);
+}
+.workspace-heading.with-orbit h1 {
+  font-size: 34px;
+  max-width: 6.6em;
+  margin: 10px 0 0;
+}
+.heading-tagline {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.workspace-heading.with-orbit .heading-aside {
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+}
+.workspace-heading.with-orbit .heading-details {
+  justify-content: center;
+}
+.orbit-scene {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The scene grows with the window; the arrangement lanes give up most of that height so the
+   piano roll stays on screen. */
+.workspace.orbit-open {
+  --orbit-canvas: clamp(120px, calc(100vh - 770px), 240px);
+}
+.workspace.orbit-open.editor-open .arrangement .timeline-scroll {
+  max-height: var(
+    --timeline-height,
+    clamp(150px, calc(50vh - 190px - (var(--orbit-canvas) - 28px) * 0.7), 440px)
+  );
+}
+.orbit-scene canvas {
+  display: block;
+  width: 100%;
+  height: var(--orbit-canvas, 160px);
+  border-radius: 3px;
+  background: #05060b;
+}
+[data-theme="dark"] .orbit-scene canvas {
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+.orbit-scene figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.orbit-scene figcaption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace-heading.with-orbit .heading-links {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+}
+.heading-links > .orbit-toggle {
+  color: var(--color-text-muted);
+}
+@media (max-width: 1150px) {
+  .workspace-heading.with-orbit .heading-copy {
+    padding-right: 18px;
+  }
+  .workspace-heading.with-orbit h1 {
+    font-size: 28px;
+  }
+  .workspace-heading.with-orbit .heading-tagline {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .workspace-heading.with-orbit {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .workspace-heading.with-orbit .heading-copy {
+    border-right: 0;
+    padding-right: 0;
+  }
+  .workspace-heading.with-orbit h1 {
+    max-width: none;
+  }
+  .workspace-heading.with-orbit .heading-aside {
+    flex-direction: column;
+  }
+  .workspace-heading.with-orbit .heading-details {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 18px;
+    border-left: 0;
+    padding-left: 0;
+  }
+  .workspace-heading.with-orbit .heading-links {
+    flex-direction: row;
+    gap: 14px;
+  }
 }
