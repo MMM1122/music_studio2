@@ -81,7 +81,15 @@
   margin: 7px 0;
 }
 .reference-navigation {
-  margin: 12px 0 20px;
+  margin: 12px 0 8px;
+}
+.reference-analysis .reference-follow {
+  margin: 0 0 20px;
+}
+.reference-analysis .reference-follow input {
+  padding: 0;
+  margin: 0;
+  accent-color: var(--color-slate);
 }
 .reference-navigation input {
   flex: 1;

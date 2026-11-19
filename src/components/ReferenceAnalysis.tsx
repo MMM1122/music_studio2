@@ -25,6 +25,10 @@ import {
   useTransportStore,
 } from "../stores/transportStore";
 import "../themes/reference-analysis.css";
+/** Share of the zoomed window the playhead may reach before the view pages forward. */
+const FOLLOW_EDGE = 0.9;
+/** Where the playhead lands in the window after a page turn. */
+const FOLLOW_LEAD = 0.05;
 const time = (value: number) =>
   `${Math.floor(Math.max(0, value) / 60)}:${String(Math.floor(Math.max(0, value) % 60)).padStart(2, "0")}`;
 export function ReferenceAnalysis({
@@ -49,6 +53,7 @@ export function ReferenceAnalysis({
     [peaks, setPeaks] = useState<Float32Array<ArrayBuffer> | null>(null),
     [zoom, setZoom] = useState(1),
     [windowStart, setWindowStart] = useState(0),
+    [follow, setFollow] = useState(true),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
   const [markerLabel, setMarkerLabel] = useState("Intro"),
@@ -127,15 +132,42 @@ export function ReferenceAnalysis({
     setMarkerTime(bounded.toFixed(2));
   }
   useTransportDraw(
-    ({ tick }) => {
+    ({ tick, playing: moving }) => {
+      const seconds = sourceAt(tick);
+      // While zoomed in and playing, turn the page when the playhead nears the right edge
+      // (or has left the window), so the view keeps up without manual navigation.
+      if (
+        follow &&
+        moving &&
+        zoom > 1 &&
+        (seconds < start || seconds > start + visible * FOLLOW_EDGE)
+      ) {
+        const next = Math.max(
+          0,
+          Math.min(duration - visible, seconds - visible * FOLLOW_LEAD),
+        );
+        if (Math.abs(next - start) > 0.001) {
+          setWindowStart(next);
+          return;
+        }
+      }
       if (head.current) {
-        const seconds = sourceAt(tick);
         head.current.style.left = `${((seconds - start) / Math.max(0.001, visible)) * 100}%`;
         head.current.style.visibility =
           seconds >= start && seconds <= start + visible ? "visible" : "hidden";
       }
     },
-    [start, visible, bpm, clip.startTick, clip.offsetSeconds, open],
+    [
+      start,
+      visible,
+      duration,
+      zoom,
+      follow,
+      bpm,
+      clip.startTick,
+      clip.offsetSeconds,
+      open,
+    ],
   );
   useEffect(() => {
     const node = canvas.current;
@@ -378,11 +410,25 @@ export function ReferenceAnalysis({
                   step=".1"
                   value={start}
                   disabled={zoom === 1}
-                  onChange={(e) => setWindowStart(Number(e.target.value))}
+                  onChange={(e) => {
+                    // Looking elsewhere by hand means the view should stop chasing playback.
+                    setFollow(false);
+                    setWindowStart(Number(e.target.value));
+                  }}
                 />
                 <span>
                   {time(start)}–{time(start + visible)}
                 </span>
+              </label>
+              <label className="reference-follow">
+                <input
+                  type="checkbox"
+                  aria-label="Follow playhead"
+                  checked={follow}
+                  disabled={zoom === 1}
+                  onChange={(e) => setFollow(e.target.checked)}
+                />
+                Follow playhead while zoomed
               </label>
               <Spectrum trackId={track.id} />
             </>
