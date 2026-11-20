@@ -2142,101 +2142,216 @@ body.is-resizing-panes {
   flex-shrink: 0;
 }
 
-/* Twin resonance: an expandable heading with the two-planet scene beside the title. The scene
-   is space in either theme; only its frame and captions follow the theme. */
+/* Twin resonance is a small observatory: a quiet frame, a wider orbital plane, and
+   captions inside the artwork so it leaves room for the musical editors. */
 .workspace-heading.with-orbit {
   min-height: 0;
-  padding: 14px 24px;
+  padding: 14px 24px 12px;
   align-items: stretch;
-  gap: 26px;
+  gap: 24px;
 }
 .workspace-heading.with-orbit .heading-copy {
-  flex: 0 0 auto;
+  flex: 0 0 190px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-right: 26px;
-  border-right: 1px solid var(--color-border);
 }
 .workspace-heading.with-orbit h1 {
-  font-size: 34px;
+  font-size: 32px;
   max-width: 6.6em;
   margin: 10px 0 0;
+  line-height: 1.08;
+}
+.workspace-heading.with-orbit .eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.12em;
 }
 .heading-tagline {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-secondary);
 }
 .workspace-heading.with-orbit .heading-aside {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
-  align-items: stretch;
-}
-.workspace-heading.with-orbit .heading-details {
-  justify-content: center;
-}
-.orbit-scene {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 9px;
 }
-/* The scene grows with the window; the arrangement lanes give up most of that height so the
-   piano roll stays on screen. */
+.workspace-heading.with-orbit .heading-details {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+}
 .workspace.orbit-open {
-  --orbit-canvas: clamp(120px, calc(100vh - 770px), 240px);
+  --orbit-canvas: clamp(150px, calc(100vh - 744px), 224px);
 }
 .workspace.orbit-open.editor-open .arrangement .timeline-scroll {
   max-height: var(
     --timeline-height,
-    clamp(150px, calc(50vh - 190px - (var(--orbit-canvas) - 28px) * 0.7), 440px)
+    clamp(150px, calc(50vh - 190px - (var(--orbit-canvas) - 18px) * 0.7), 440px)
   );
+}
+.orbit-scene {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid #25303d;
+  border-radius: 10px;
+  background: #080d15;
+  color: #a9b8c9;
+  box-shadow:
+    0 3px 12px #101d2c0d,
+    inset 0 1px 0 #ffffff0a;
+  container-type: inline-size;
+}
+.orbit-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 24px #03060c55;
 }
 .orbit-scene canvas {
   display: block;
   width: 100%;
   height: var(--orbit-canvas, 160px);
-  border-radius: 3px;
-  background: #05060b;
 }
-[data-theme="dark"] .orbit-scene canvas {
-  box-shadow: 0 0 0 1px var(--color-border);
+[data-theme="dark"] .orbit-scene {
+  border-color: #35414e;
+  box-shadow: 0 3px 16px #00000026;
 }
+.orbit-overline,
 .orbit-scene figcaption {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  z-index: 1;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
+  pointer-events: none;
+  font-size: 12px;
+  line-height: 1.35;
 }
-.orbit-scene figcaption span {
+.orbit-overline {
+  top: 12px;
+}
+.orbit-title {
+  color: #c1ccd8;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.orbit-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.orbit-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6e8094;
+  transition:
+    background-color 500ms,
+    box-shadow 500ms;
+}
+.orbit-scene[data-state="orbit"] .orbit-status i,
+.orbit-scene[data-state="resonance"] .orbit-status i {
+  background: #b1d8d4;
+  box-shadow: 0 0 7px #b1d8d460;
+}
+.orbit-scene figcaption {
+  bottom: 11px;
+  white-space: nowrap;
+}
+.orbit-voice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 42%;
+}
+.orbit-voice > span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.orbit-voice > i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border: 1px solid #a8cfdf80;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #add1e6, #4d7792 55%, #172938);
+}
+.orbit-voice-lower > i {
+  border-color: #ddbaae80;
+  background: linear-gradient(135deg, #e0bdaf, #96756e 55%, #392b30);
+}
+.orbit-caption {
+  color: #93a5b9;
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-size: 14px;
+}
+.orbit-scene[data-voice-count="0"] .orbit-caption,
+.orbit-scene[data-voice-count="1"] .orbit-caption {
+  display: none;
+}
+@container (max-width: 590px) {
+  .orbit-caption {
+    display: none;
+  }
+}
 .workspace-heading.with-orbit .heading-links {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 11px;
+  flex-direction: row;
+  align-items: center;
+  gap: 18px;
+}
+.workspace-heading.with-orbit .heading-links > button,
+.workspace-heading.with-orbit .session-meta {
+  font-size: 12px;
 }
 .heading-links > .orbit-toggle {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 @media (max-width: 1150px) {
-  .workspace-heading.with-orbit .heading-copy {
+  .workspace-heading.with-orbit {
+    gap: 18px;
+    padding-left: 18px;
     padding-right: 18px;
+  }
+  .workspace-heading.with-orbit .heading-copy {
+    flex-basis: 156px;
   }
   .workspace-heading.with-orbit h1 {
     font-size: 28px;
   }
+  .workspace-heading.with-orbit .eyebrow {
+    letter-spacing: 0.06em;
+  }
   .workspace-heading.with-orbit .heading-tagline {
+    font-size: 12px;
+  }
+  .workspace-heading.with-orbit .session-meta {
     display: none;
+  }
+  .workspace-heading.with-orbit .heading-links {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .workspace-heading.with-orbit .heading-details {
+    display: flex;
   }
 }
 @media (max-width: 900px) {
@@ -2245,25 +2360,16 @@ body.is-resizing-panes {
     gap: 12px;
   }
   .workspace-heading.with-orbit .heading-copy {
-    border-right: 0;
-    padding-right: 0;
+    flex-basis: auto;
   }
   .workspace-heading.with-orbit h1 {
     max-width: none;
+    margin-top: 6px;
+  }
+  .workspace-heading.with-orbit .heading-tagline {
+    display: none;
   }
   .workspace-heading.with-orbit .heading-aside {
-    flex-direction: column;
-  }
-  .workspace-heading.with-orbit .heading-details {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 18px;
-    border-left: 0;
-    padding-left: 0;
-  }
-  .workspace-heading.with-orbit .heading-links {
-    flex-direction: row;
-    gap: 14px;
+    flex: 0 0 auto;
   }
 }

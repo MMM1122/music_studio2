@@ -2,7 +2,7 @@
 
 **A creative playground where mathematics becomes music.**
 
-**[Open STUDIO — Live Website →](https://music-studio2.vercel.app)**
+**[Open STUDIO — music-studio2.vercel.app](https://music-studio2.vercel.app/)**
 
 Publicly accessible in your browser. No login or installation required. Click **Play** to start audio. The site redeploys automatically from `main` on Vercel.
 
@@ -10,7 +10,17 @@ The public website is deployed from this repository. Existing saved sessions sta
 
 A working browser music studio for composing original R&B, neo-soul, electronic music, and beats. Built with React, strict TypeScript, Tone.js, and Web Audio. No account, paid samples, or AI credentials are needed.
 
-![STUDIO in Gallery Light](docs/screenshots/studio-light.png)
+![STUDIO in Gallery Light with the refined Twin resonance orbit](docs/screenshots/studio-orbit-light.png)
+
+## Twin resonance
+
+Try it on the **[live STUDIO website](https://music-studio2.vercel.app/)**. On shorter windows, choose **Show orbit** above the arrangement to reveal the scene.
+
+**Show orbit** opens a miniature observatory above the arrangement. An ice-blue planet and a warm, ringed companion follow the two main audible melodic tracks: their pitch contours move the planets, the interval changes their distance, and each voice's level lights its atmosphere. Fine filaments carry the actual output waveform. The colored captions identify the tracks being followed.
+
+The scene opens by default on tall windows and remembers **Hide orbit**. Its wider frame works in both themes, with the piano roll kept on screen. System **Reduce motion** makes the artwork still while audio continues; changes to that preference take effect immediately. Planet textures and the star field are cached when the scene resizes.
+
+![Refined Twin resonance orbit](docs/screenshots/orbit-refined.png)
 
 ## Mathematical Music Lab
 

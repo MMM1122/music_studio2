@@ -239,3 +239,67 @@ test("the twin orbit starts hidden on short windows", async ({ page }) => {
   await expect(page.locator(".orbit-scene")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Show orbit" })).toBeVisible();
 });
+
+test("reduced motion keeps the orbit still during audio and responds to preference changes", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, 1440, 900);
+  const canvas = page.locator(".orbit-scene canvas");
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
+    )
+    .toBe(true);
+  // Compare just the artwork, so an accessible playback caption may still change.
+  const still = await canvas.screenshot();
+  await page.waitForTimeout(400);
+  expect((await canvas.screenshot()).equals(still)).toBe(true);
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect
+    .poll(async () => (await canvas.screenshot()).equals(still))
+    .toBe(false);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect
+    .poll(async () => (await canvas.screenshot()).equals(still))
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
+    )
+    .toBe(true);
+  await page.keyboard.press("Space");
+});
+
+test("orbit captions fit at narrow widths and after resizing", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("studio.orbit-open", "1"),
+  );
+  for (const width of [1024, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 1024) await page.goto("/");
+    const scene = page.locator(".orbit-scene");
+    await expect(scene).toBeVisible();
+    await expect(scene.locator(".orbit-voice-upper")).toHaveText("Small hours");
+    const bounds = (await scene.boundingBox())!;
+    for (const selector of [".orbit-overline", "figcaption"]) {
+      const caption = (await scene.locator(selector).boundingBox())!;
+      expect(caption.x).toBeGreaterThanOrEqual(bounds.x);
+      expect(caption.x + caption.width).toBeLessThanOrEqual(
+        bounds.x + bounds.width,
+      );
+      expect(caption.y + caption.height).toBeLessThanOrEqual(
+        bounds.y + bounds.height,
+      );
+    }
+    const [upper, lower] = await Promise.all([
+      scene.locator(".orbit-voice-upper").boundingBox(),
+      scene.locator(".orbit-voice-lower").boundingBox(),
+    ]);
+    expect(upper!.x + upper!.width).toBeLessThan(lower!.x);
+  }
+});
