@@ -12,6 +12,14 @@ A working browser music studio for composing original R&B, neo-soul, electronic 
 
 ![STUDIO in Gallery Light](docs/screenshots/studio-light.png)
 
+## Twin resonance
+
+**Show orbit** opens a miniature observatory above the arrangement. An ice-blue planet and a warm, ringed companion follow the two main audible melodic tracks: their pitch contours move the planets, the interval changes their distance, and each voice's level lights its atmosphere. Fine filaments carry the actual output waveform. The colored captions identify the tracks being followed.
+
+The scene opens by default on tall windows and remembers **Hide orbit**. Its wider frame works in both themes, with the piano roll kept on screen. System **Reduce motion** makes the artwork still while audio continues; changes to that preference take effect immediately. Planet textures and the star field are cached when the scene resizes.
+
+![Refined Twin resonance orbit](docs/screenshots/orbit-refined.png)
+
 ## Mathematical Music Lab
 
 Open **Math Lab** from the sidebar to turn functions into editable melodies, shape an eight-harmonic Fourier synthesizer, and build melodies with genuine Dirichlet–Categorical feedback. **Add to Studio** creates normal editable tracks; saved harmonic sounds also appear in the Inspector. Works locally with no API keys, in Gallery Light and Dark.

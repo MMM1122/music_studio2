@@ -10,193 +10,16 @@ import {
   type OrbitScore,
 } from "../visual/orbit";
 
-/** Ice blue for the upper voice, rose violet for the lower one. */
-const BLUE = {
-  light: "#cfe6ff",
-  mid: "#4f7fae",
-  dark: "#0b1a2e",
-  rim: "150,200,255",
-};
-const ROSE = {
-  light: "#f1d8f0",
-  mid: "#8f6a9e",
-  dark: "#1c1022",
-  rim: "235,170,225",
-};
-type Palette = typeof BLUE;
-
-function random(seed: number) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function layer(width: number, height: number, dpr: number) {
-  const node = document.createElement("canvas");
-  node.width = Math.max(1, Math.ceil(width * dpr));
-  node.height = Math.max(1, Math.ceil(height * dpr));
-  const ctx = node.getContext("2d")!;
-  ctx.scale(dpr, dpr);
-  return { node, ctx };
-}
-
-/** Deep space: a near-black field, two faint nebulae and a fixed scatter of stars. */
-function paintSky(width: number, height: number, dpr: number) {
-  const { node, ctx } = layer(width, height, dpr);
-  const sky = ctx.createLinearGradient(0, 0, 0, height);
-  sky.addColorStop(0, "#05060b");
-  sky.addColorStop(1, "#08090f");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, width, height);
-  for (const [x, y, color] of [
-    [0.28, 0.5, "70,120,180"],
-    [0.74, 0.42, "170,100,160"],
-  ] as const) {
-    const glow = ctx.createRadialGradient(
-      x * width,
-      y * height,
-      0,
-      x * width,
-      y * height,
-      width * 0.42,
-    );
-    glow.addColorStop(0, `rgba(${color},0.09)`);
-    glow.addColorStop(1, `rgba(${color},0)`);
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, width, height);
-  }
-  const rand = random(17);
-  const count = Math.round((width * height) / 700);
-  for (let i = 0; i < count; i++) {
-    const size = rand() ** 3 * 1.1 + 0.25;
-    ctx.fillStyle = `rgba(${rand() < 0.2 ? "210,220,255" : rand() < 0.1 ? "255,220,240" : "235,235,240"},${0.12 + rand() * 0.55})`;
-    ctx.beginPath();
-    ctx.arc(rand() * width, rand() * height, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  for (let i = 0; i < 3; i++) {
-    const x = (0.08 + rand() * 0.84) * width,
-      y = (0.1 + rand() * 0.8) * height,
-      reach = 5 + rand() * 6;
-    const halo = ctx.createRadialGradient(x, y, 0, x, y, reach);
-    halo.addColorStop(0, "rgba(255,255,255,0.8)");
-    halo.addColorStop(0.2, "rgba(200,220,255,0.25)");
-    halo.addColorStop(1, "rgba(200,220,255,0)");
-    ctx.fillStyle = halo;
-    ctx.fillRect(x - reach, y - reach, reach * 2, reach * 2);
-    ctx.strokeStyle = "rgba(220,230,255,0.35)";
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(x - reach * 1.4, y);
-    ctx.lineTo(x + reach * 1.4, y);
-    ctx.moveTo(x, y - reach * 1.4);
-    ctx.lineTo(x, y + reach * 1.4);
-    ctx.stroke();
-  }
-  const vignette = ctx.createRadialGradient(
-    width / 2,
-    height / 2,
-    Math.min(width, height) * 0.3,
-    width / 2,
-    height / 2,
-    Math.max(width, height) * 0.75,
-  );
-  vignette.addColorStop(0, "rgba(0,0,0,0)");
-  vignette.addColorStop(1, "rgba(0,0,0,0.55)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, width, height);
-  return node;
-}
-
-/** A lit sphere with cloud or band texture, rendered once per size. */
-function paintPlanet(
-  radius: number,
-  palette: Palette,
-  banded: boolean,
-  seed: number,
-  dpr: number,
-) {
-  const size = radius * 2;
-  const { node, ctx } = layer(size, size, dpr);
-  ctx.translate(radius, radius);
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.clip();
-  const base = ctx.createRadialGradient(
-    -radius * 0.35,
-    -radius * 0.35,
-    radius * 0.1,
-    0,
-    0,
-    radius,
-  );
-  base.addColorStop(0, palette.light);
-  base.addColorStop(0.45, palette.mid);
-  base.addColorStop(1, palette.dark);
-  ctx.fillStyle = base;
-  ctx.fillRect(-radius, -radius, size, size);
-  const rand = random(seed);
-  if (banded)
-    for (let i = 0; i < 16; i++) {
-      const y = (rand() * 2 - 1) * radius,
-        h = radius * (0.03 + rand() * 0.12);
-      ctx.fillStyle =
-        rand() < 0.5
-          ? `rgba(255,230,250,${0.03 + rand() * 0.07})`
-          : `rgba(40,10,50,${0.05 + rand() * 0.1})`;
-      ctx.beginPath();
-      ctx.ellipse(0, y, radius * 1.1, h, rand() * 0.12 - 0.06, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  for (let i = 0; i < (banded ? 8 : 46); i++) {
-    const angle = rand() * Math.PI * 2,
-      distance = Math.sqrt(rand()) * radius;
-    ctx.fillStyle =
-      rand() < 0.55
-        ? `rgba(225,240,255,${0.03 + rand() * 0.08})`
-        : `rgba(10,30,60,${0.05 + rand() * 0.1})`;
-    ctx.beginPath();
-    ctx.ellipse(
-      Math.cos(angle) * distance,
-      Math.sin(angle) * distance,
-      radius * (0.05 + rand() * 0.3),
-      radius * (0.03 + rand() * 0.12),
-      rand() * Math.PI,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-  }
-  // Night side toward the lower right, from a light up and to the left.
-  const shade = ctx.createRadialGradient(
-    -radius * 0.45,
-    -radius * 0.4,
-    radius * 0.2,
-    -radius * 0.2,
-    -radius * 0.2,
-    radius * 1.55,
-  );
-  shade.addColorStop(0, "rgba(0,0,8,0)");
-  shade.addColorStop(0.55, "rgba(0,0,8,0.25)");
-  shade.addColorStop(1, "rgba(0,0,8,0.92)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(-radius, -radius, size, size);
-  const atmosphere = ctx.createRadialGradient(
-    0,
-    0,
-    radius * 0.82,
-    0,
-    0,
-    radius,
-  );
-  atmosphere.addColorStop(0, `rgba(${palette.rim},0)`);
-  atmosphere.addColorStop(1, `rgba(${palette.rim},0.45)`);
-  ctx.fillStyle = atmosphere;
-  ctx.fillRect(-radius, -radius, size, size);
-  return node;
-}
+import {
+  BLUE,
+  ROSE,
+  random,
+  paintSky,
+  paintPlanet,
+  paintRing,
+  paintOrbit,
+  type Palette,
+} from "../visual/orbitArtwork";
 
 const toGlow = (peak: number) =>
   Math.max(0, Math.min(1, (20 * Math.log10(Math.max(1e-6, peak)) + 42) / 36));
@@ -208,13 +31,21 @@ const ease = (current: number, next: number, dt: number) =>
 export function OrbitScene() {
   const figure = useRef<HTMLElement>(null),
     canvas = useRef<HTMLCanvasElement>(null),
-    names = useRef<HTMLSpanElement>(null),
+    upperName = useRef<HTMLSpanElement>(null),
+    lowerName = useRef<HTMLSpanElement>(null),
     status = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const node = canvas.current!,
       ctx = node.getContext("2d");
     if (!ctx) return;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
+    let reduced = motionPreference.matches;
+    const onMotionChange = () => {
+      reduced = motionPreference.matches;
+      trailA.length = trailB.length = 0;
+      lastDraw = 0;
+    };
+    motionPreference.addEventListener("change", onMotionChange);
     const wave = new Float32Array(1024),
       spectrum = new Uint8Array(512);
     let width = 0,
@@ -258,11 +89,12 @@ export function OrbitScene() {
       dpr = Math.min(2, devicePixelRatio || 1);
       node.width = Math.round(width * dpr);
       node.height = Math.round(height * dpr);
-      radiusA = Math.max(12, Math.min(70, height * 0.2));
-      radiusB = radiusA * 0.64;
+      radiusA = Math.max(12, Math.min(58, height * 0.225, width * 0.09));
+      radiusB = radiusA * 0.67;
+      trailA.length = trailB.length = 0;
       sky = paintSky(width, height, dpr);
-      blue = paintPlanet(radiusA, BLUE, false, 7, dpr);
-      rose = paintPlanet(radiusB, ROSE, true, 23, dpr);
+      blue = paintPlanet(radiusA, BLUE, 7, dpr);
+      rose = paintPlanet(radiusB, ROSE, 23, dpr);
       lastDraw = 0;
     }
 
@@ -305,10 +137,16 @@ export function OrbitScene() {
         score = chooseVoices(project, mode);
         scored = project;
         scoredMode = mode;
-        const label = score.voices.length
-          ? score.voices.map((v) => v.name).join(" · ")
-          : "Room for resonance";
-        if (names.current) names.current.textContent = label;
+        if (upperName.current)
+          upperName.current.textContent =
+            score.voices[0]?.name ?? "Add a melodic track";
+        if (lowerName.current)
+          lowerName.current.textContent =
+            score.voices[1]?.name ?? "Room for another voice";
+        figure.current?.setAttribute(
+          "data-voice-count",
+          String(score.voices.length),
+        );
         figure.current?.setAttribute(
           "data-voices",
           score.voices.map((v) => v.name).join("|"),
@@ -316,18 +154,24 @@ export function OrbitScene() {
       }
       const playing = engine.isPlaying(),
         tick = engine.getTick();
-      const targets = orbitTargets(score, tick, playing && !reduced);
-      const seconds = time / 1000,
+      const targets = orbitTargets(score, tick, playing);
+      const seconds = reduced ? 0 : time / 1000,
         drift = reduced ? 0 : 1;
       // Gentle Lissajous drift on top of the musical target, so paths curve rather than slide.
-      const tax = targets.a.x + drift * 0.012 * Math.sin(seconds * 0.23),
-        tay = targets.a.y + drift * 0.035 * Math.sin(seconds * 0.31 + 1),
-        tbx = targets.b.x + drift * 0.012 * Math.sin(seconds * 0.19 + 2),
-        tby = targets.b.y + drift * 0.035 * Math.sin(seconds * 0.27 + 4);
-      [a.x, a.vx] = springStep(a.x, a.vx, tax, dt);
-      [a.y, a.vy] = springStep(a.y, a.vy, tay, dt);
-      [b.x, b.vx] = springStep(b.x, b.vx, tbx, dt);
-      [b.y, b.vy] = springStep(b.y, b.vy, tby, dt);
+      const position = reduced ? start : targets;
+      const tax = position.a.x + drift * 0.012 * Math.sin(seconds * 0.23),
+        tay = position.a.y + drift * 0.035 * Math.sin(seconds * 0.31 + 1),
+        tbx = position.b.x + drift * 0.012 * Math.sin(seconds * 0.19 + 2),
+        tby = position.b.y + drift * 0.035 * Math.sin(seconds * 0.27 + 4);
+      if (reduced) {
+        Object.assign(a, { x: tax, y: tay, vx: 0, vy: 0 });
+        Object.assign(b, { x: tbx, y: tby, vx: 0, vy: 0 });
+      } else {
+        [a.x, a.vx] = springStep(a.x, a.vx, tax, dt);
+        [a.y, a.vy] = springStep(a.y, a.vy, tay, dt);
+        [b.x, b.vx] = springStep(b.x, b.vx, tbx, dt);
+        [b.y, b.vy] = springStep(b.y, b.vy, tby, dt);
+      }
       engine.readAnalysis(wave, spectrum);
       let sum = 0;
       for (const v of wave) sum += v * v;
@@ -335,15 +179,16 @@ export function OrbitScene() {
       const [upper, lower] = score.voices;
       glowA = ease(
         glowA,
-        upper ? toGlow(engine.getTrackLevel(upper.trackId)) : 0,
+        upper && !reduced ? toGlow(engine.getTrackLevel(upper.trackId)) : 0,
         dt,
       );
       glowB = ease(
         glowB,
-        lower ? toGlow(engine.getTrackLevel(lower.trackId)) : 0,
+        lower && !reduced ? toGlow(engine.getTrackLevel(lower.trackId)) : 0,
         dt,
       );
       glowWave = ease(glowWave, toGlow(rms * 1.4), dt);
+      if (reduced) glowA = glowB = glowWave = 0;
       const quiet = !playing && glowA + glowB + glowWave < 0.01;
       // Between takes the planets only drift slowly, so a lower frame rate is enough.
       if (time - lastDraw < (reduced ? 100 : quiet ? 33 : 0)) return;
@@ -354,9 +199,11 @@ export function OrbitScene() {
         h = height;
       let ax = a.x * w,
         bx = b.x * w;
-      const ay = Math.max(radiusA + 4, Math.min(h - radiusA - 4, a.y * h)),
-        by = Math.max(radiusB + 4, Math.min(h - radiusB - 4, b.y * h));
-      const minimum = (radiusA + radiusB) * 1.15;
+      const padding = Math.min(28, h * 0.18);
+      const sceneHeight = h - padding * 2;
+      const ay = padding + radiusA + (sceneHeight - radiusA * 2) * a.y,
+        by = padding + radiusB + (sceneHeight - radiusB * 2) * b.y;
+      const minimum = radiusA + radiusB * 1.85 + 14;
       if (bx - ax < minimum) {
         const mid = (ax + bx) / 2;
         ax = mid - minimum / 2;
@@ -371,6 +218,7 @@ export function OrbitScene() {
           ctx!.fillRect(star.x * w, star.y * h, 1.1, 1.1);
         }
 
+      paintOrbit(ctx!, ax, ay, bx, by, sceneHeight, seconds, glowWave);
       ctx!.globalCompositeOperation = "lighter";
       // Sound wave between the planets: a soft arc carrying the measured waveform.
       const fromX = ax + radiusA * 0.95,
@@ -400,18 +248,29 @@ export function OrbitScene() {
       let peak = 0;
       for (let i = 0; i < 90 * 9; i++)
         peak = Math.max(peak, Math.abs(wave[(crossing + i) % wave.length]));
-      const swing = h * 0.16 * glowWave;
-      comb(
-        bridge,
-        (i, u) =>
-          (Math.abs(wave[(crossing + i * 9) % wave.length]) /
-            Math.max(0.05, peak)) *
-            swing *
-            Math.sin(Math.PI * u) ** 1.2 +
-          h * 0.006 * (0.5 + 0.5 * Math.sin(i * 1.7 + seconds * 2)),
-        link,
-        0.35 + 0.6 * glowWave,
-      );
+      const swing = h * 0.065 * glowWave;
+      // Three fine filaments share the real waveform. They resolve to one quiet line at rest.
+      for (let strand = -1; strand <= 1; strand++) {
+        ctx!.strokeStyle = link;
+        ctx!.globalAlpha =
+          strand === 0 ? 0.28 + glowWave * 0.45 : glowWave * 0.16;
+        ctx!.lineWidth = strand === 0 ? 0.85 : 0.6;
+        ctx!.beginPath();
+        bridge.forEach((point, i) => {
+          const u = i / (bridge.length - 1);
+          const signal =
+            wave[(crossing + i * 9) % wave.length] / Math.max(0.05, peak);
+          const y =
+            point.y +
+            (signal * swing +
+              strand * Math.sin(u * 12 - seconds) * swing * 0.5) *
+              Math.sin(Math.PI * u);
+          if (i) ctx!.lineTo(point.x, y);
+          else ctx!.moveTo(point.x, y);
+        });
+        ctx!.stroke();
+      }
+      ctx!.globalAlpha = 1;
       // Outer tails: frequency energy fanning away from each planet toward the edges.
       const tail = (
         fromPlanetX: number,
@@ -438,17 +297,18 @@ export function OrbitScene() {
         comb(
           points,
           (i, u) => {
-            const bin =
-              spectrum[Math.min(511, 2 + Math.round((1 - u) * 120))] / 255;
+            const bin = reduced
+              ? 0
+              : spectrum[Math.min(511, 2 + Math.round((1 - u) * 120))] / 255;
             const envelope = Math.exp(-(((u - 0.45) / 0.2) ** 2));
             return (
               envelope *
-              (h * 0.01 + bin * h * 0.14 * (0.3 + 0.7 * glow)) *
+              (h * 0.002 + bin * h * 0.07 * (0.3 + 0.7 * glow)) *
               (0.55 + 0.45 * Math.abs(Math.sin(i * 2.3 + offset)))
             );
           },
           `rgba(${palette.rim},1)`,
-          0.25 + 0.55 * glow,
+          0.08 + 0.35 * glow,
         );
       };
       tail(
@@ -480,7 +340,7 @@ export function OrbitScene() {
         ] as const) {
           ctx!.lineWidth = 1.2;
           for (let i = 1; i < trail.length; i++) {
-            ctx!.strokeStyle = `rgba(${palette.rim},${(i / trail.length) ** 2 * 0.5})`;
+            ctx!.strokeStyle = `rgba(${palette.rim},${(i / trail.length) ** 2 * 0.18})`;
             ctx!.beginPath();
             ctx!.moveTo(trail[i - 1].x, trail[i - 1].y);
             ctx!.lineTo(trail[i].x, trail[i].y);
@@ -494,34 +354,36 @@ export function OrbitScene() {
         [ax, ay, radiusA, BLUE, glowA],
         [bx, by, radiusB, ROSE, glowB],
       ] as const) {
-        const reach = r * (1.5 + 0.9 * glow);
+        const reach = r * (1.8 + 0.7 * glow);
         const halo = ctx!.createRadialGradient(x, y, r * 0.8, x, y, reach);
-        halo.addColorStop(0, `rgba(${palette.rim},${0.16 + 0.4 * glow})`);
+        halo.addColorStop(0, `rgba(${palette.rim},${0.07 + 0.16 * glow})`);
         halo.addColorStop(1, `rgba(${palette.rim},0)`);
         ctx!.fillStyle = halo;
         ctx!.fillRect(x - reach, y - reach, reach * 2, reach * 2);
       }
       ctx!.globalCompositeOperation = "source-over";
+      paintRing(ctx!, bx, by, radiusB, false, glowB);
       ctx!.drawImage(
         blue,
-        ax - radiusA,
-        ay - radiusA,
-        radiusA * 2,
-        radiusA * 2,
+        ax - radiusA - 2,
+        ay - radiusA - 2,
+        radiusA * 2 + 4,
+        radiusA * 2 + 4,
       );
       ctx!.drawImage(
         rose,
-        bx - radiusB,
-        by - radiusB,
-        radiusB * 2,
-        radiusB * 2,
+        bx - radiusB - 2,
+        by - radiusB - 2,
+        radiusB * 2 + 4,
+        radiusB * 2 + 4,
       );
+      paintRing(ctx!, bx, by, radiusB, true, glowB);
       ctx!.globalCompositeOperation = "lighter";
       for (const [x, y, r, palette, glow] of [
         [ax, ay, radiusA, BLUE, glowA],
         [bx, by, radiusB, ROSE, glowB],
       ] as const) {
-        ctx!.strokeStyle = `rgba(${palette.rim},${0.1 + 0.4 * glow})`;
+        ctx!.strokeStyle = `rgba(${palette.rim},${0.12 + 0.25 * glow})`;
         ctx!.lineWidth = 0.8 + 0.6 * glow;
         ctx!.beginPath();
         ctx!.arc(x, y, r - 0.5, -Math.PI * 0.95, Math.PI * 0.15);
@@ -541,10 +403,10 @@ export function OrbitScene() {
         if (status.current)
           status.current.textContent =
             state === "rest"
-              ? "Two bodies · at rest"
+              ? "At rest"
               : state === "resonance"
-                ? "Two bodies · in resonance"
-                : "Two bodies · in orbit";
+                ? "In resonance"
+                : "In orbit";
       }
       figure.current?.setAttribute(
         "data-separation",
@@ -564,6 +426,7 @@ export function OrbitScene() {
       cancelAnimationFrame(frame);
       resize.disconnect();
       observer.disconnect();
+      motionPreference.removeEventListener("change", onMotionChange);
     };
   }, []);
   return (
@@ -573,14 +436,30 @@ export function OrbitScene() {
       data-state="rest"
       aria-label="Twin resonance visualization"
     >
+      <div className="orbit-overline">
+        <span className="orbit-title">Twin resonance</span>
+        <span className="orbit-status">
+          <i aria-hidden="true" />
+          <span ref={status}>At rest</span>
+        </span>
+      </div>
       <canvas
         ref={canvas}
         role="img"
         aria-label="Two planets, one for each main melodic line. They drift closer when the lines move near in pitch, apart when they spread, glow with loudness and settle between phrases."
       />
       <figcaption>
-        <span ref={names}>Room for resonance</span>
-        <span ref={status}>Two bodies · at rest</span>
+        <span className="orbit-voice orbit-voice-upper">
+          <i aria-hidden="true" />
+          <span ref={upperName}>Add a melodic track</span>
+        </span>
+        <span className="orbit-caption">
+          Two voices. One gravitational pull.
+        </span>
+        <span className="orbit-voice orbit-voice-lower">
+          <i aria-hidden="true" />
+          <span ref={lowerName}>Room for another voice</span>
+        </span>
       </figcaption>
     </figure>
   );
