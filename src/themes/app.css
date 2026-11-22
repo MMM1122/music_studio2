@@ -2142,7 +2142,7 @@ body.is-resizing-panes {
   flex-shrink: 0;
 }
 
-/* Twin resonance is a small observatory: a quiet frame, a wider orbital plane, and
+/* Twin resonance is a small observatory: a quiet frame, intertwined galaxies, and
    captions inside the artwork so it leaves room for the musical editors. */
 .workspace-heading.with-orbit {
   min-height: 0;
@@ -2204,7 +2204,7 @@ body.is-resizing-panes {
   overflow: hidden;
   border: 1px solid #25303d;
   border-radius: 10px;
-  background: #080d15;
+  background: #030508;
   color: #a9b8c9;
   box-shadow:
     0 3px 12px #101d2c0d,
@@ -2251,6 +2251,70 @@ body.is-resizing-panes {
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+.orbit-subtitle {
+  margin-left: 9px;
+  color: #8c9db1;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+.orbit-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.orbit-expand {
+  pointer-events: auto;
+  width: 28px;
+  height: 28px;
+  margin: -6px -5px -6px 0;
+  color: #c2cfde;
+  border: 1px solid #c2cfde20;
+  border-radius: 5px;
+}
+.orbit-expand:hover {
+  background: #c2cfde18;
+  border-color: #c2cfde50;
+}
+.orbit-expand:focus-visible {
+  outline-color: #b7d6f5;
+}
+.orbit-error {
+  position: absolute;
+  top: 46px;
+  right: 16px;
+  padding: 6px 10px;
+  background: #10151f;
+  color: #dce4ed;
+  font-size: 12px;
+}
+.orbit-scene:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+}
+.orbit-scene:fullscreen canvas {
+  height: 100%;
+}
+.orbit-scene:fullscreen .orbit-overline,
+.orbit-scene:fullscreen figcaption {
+  left: 36px;
+  right: 36px;
+  font-size: 14px;
+}
+.orbit-scene:fullscreen .orbit-overline {
+  top: 30px;
+}
+.orbit-scene:fullscreen figcaption {
+  bottom: 30px;
+}
+.orbit-scene:fullscreen .orbit-caption {
+  font-size: 20px;
+}
+.orbit-scene:fullscreen .orbit-expand {
+  width: 36px;
+  height: 36px;
+}
 .orbit-status {
   display: inline-flex;
   align-items: center;
@@ -2292,11 +2356,23 @@ body.is-resizing-panes {
   flex: 0 0 auto;
   border: 1px solid #a8cfdf80;
   border-radius: 50%;
-  background: linear-gradient(135deg, #add1e6, #4d7792 55%, #172938);
+  background: radial-gradient(
+    circle,
+    #ffe5b7,
+    #b4d5ed 30%,
+    #4e7baf 60%,
+    transparent
+  );
 }
 .orbit-voice-lower > i {
   border-color: #ddbaae80;
-  background: linear-gradient(135deg, #e0bdaf, #96756e 55%, #392b30);
+  background: radial-gradient(
+    circle,
+    #fff0cc,
+    #e0b88c 30%,
+    #748bc4 60%,
+    transparent
+  );
 }
 .orbit-caption {
   color: #93a5b9;
@@ -2309,7 +2385,8 @@ body.is-resizing-panes {
   display: none;
 }
 @container (max-width: 590px) {
-  .orbit-caption {
+  .orbit-caption,
+  .orbit-subtitle {
     display: none;
   }
 }
