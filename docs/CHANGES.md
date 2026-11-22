@@ -1,5 +1,14 @@
 # STUDIO release notes
 
+## Version 1.9 — Note by note
+
+- **Orbit follows the melody note by note** (`src/visual/melody.ts`). Each voice's notes are read at the playhead: every onset sends a ripple of light from that galaxy's nucleus out through its arms (1.1 radii per second, fading over about two seconds, stronger for leaps). A held note lights the arms at a radius set by its pitch within the voice's range (0.22 radii for the lowest note, 1.0 for the highest) and fades about 0.35 s after it ends. Colour follows pitch from gold to ice blue. Overlapping light is capped so the arms never wash out.
+- **Motion follows the line.** Each core rises and sinks with its voice's contour (±0.2 radii, 0.25 s response, previously ±0.12 from a slower average). Leaps of a fourth or more nudge the separation, inward for upward leaps and outward for downward ones. The separation spring is quicker (natural frequency 1.3 instead of 0.9), so the pair breathes with phrases.
+- **Bridge flash.** When both voices start a note within 90 ms of each other on a consonant interval (unison, thirds, fourth, fifth, sixths), the stars between the two cores flash.
+- All of it runs on the GPU from a few uniforms per frame. Each star carries its calm radius, so the physics cost is unchanged. Reduced motion shows none of it.
+- Tests: `src/visual/melody.test.ts` (8: voice note choice, one ripple per onset, light radius rising with pitch, fading after stop, contour lift, leap kicks, bridge on a consonant unison, onsets again after a loop). `e2e/orbit.spec.ts` now checks that onsets keep arriving during playback.
+
+
 ## Version 1.8 — A binary pair
 
 - **Orbit is now a binary galaxy system.** Two galaxy cores orbit their common centre of mass (masses 1 and 0.62). The music sets their separation: it shrinks with how long the duet has been playing (about half a minute to build, ten seconds to unwind), with loudness, and with how close the two voices are in pitch. A loud unison draws them in at once. Orbital speed follows Kepler's third law, so a close pair swings round faster. The cores never come closer than 1.35 radii of the larger galaxy, so the disks overlap at their edges as in photographs of real pairs.

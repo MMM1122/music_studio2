@@ -22,6 +22,8 @@ export const REST_DISTANCE = 2.65;
 /** Closest approach the music can bring them to: the disks overlap at their edges, as in
  * the photographs of real pairs, without the cores plunging through each other. */
 export const CLOSEST_DISTANCE = 1.35;
+/** How far each core rises or sinks with its melody, in galaxy radii. */
+export const LIFT = 0.2;
 /** Orbital period at rest; shorter when closer, by Kepler's third law. */
 export const REST_PERIOD = 150;
 
@@ -83,6 +85,11 @@ export class BinaryOrbit {
     return ((Math.PI * 2) / REST_PERIOD) * (REST_DISTANCE / distance) ** 1.5;
   }
 
+  /** A melodic leap nudges the pair: positive draws them together, negative apart. */
+  kick(amount: number) {
+    this.speed -= amount * 0.45;
+  }
+
   step(dt: number, music: MusicState) {
     const drawing = music.playing && music.rest < 0.8;
     // Inspiral builds over about half a minute of music and unwinds in about ten seconds.
@@ -93,13 +100,13 @@ export class BinaryOrbit {
       ((music.playing ? 0 : 1) - this.calm) * (1 - Math.exp(-dt / 1.5));
     // Critically damped approach, so the cores glide rather than jump with each note.
     const target = BinaryOrbit.targetDistance(this.inspiral, music);
-    const omega = 0.9;
+    const omega = 1.3;
     const acceleration =
       omega * omega * (target - this.distance) - 2 * omega * this.speed;
     this.speed += acceleration * dt;
     this.distance += this.speed * dt;
     this.phase += BinaryOrbit.angularSpeed(this.distance) * dt;
-    const follow = 1 - Math.exp(-dt / 0.8);
+    const follow = 1 - Math.exp(-dt / 0.3);
     this.liftA += (music.liftA - this.liftA) * follow;
     this.liftB += (music.liftB - this.liftB) * follow;
     this.place();
@@ -112,8 +119,8 @@ export class BinaryOrbit {
     // The orbit lies in the world x–z plane around the centre of mass at the origin.
     const ra = (this.distance * this.massB) / total,
       rb = (this.distance * this.massA) / total;
-    this.coreA = [-ra * c, 0.12 * this.liftA, -ra * s];
-    this.coreB = [rb * c, 0.12 * this.liftB, rb * s];
+    this.coreA = [-ra * c, LIFT * this.liftA, -ra * s];
+    this.coreB = [rb * c, LIFT * this.liftB, rb * s];
   }
 }
 

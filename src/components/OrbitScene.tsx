@@ -23,6 +23,7 @@ import {
   type GalaxyRenderer,
 } from "../visual/galaxyGL";
 import { createLegacyRenderer } from "../visual/orbitLegacy";
+import { MelodyTracker } from "../visual/melody";
 
 const toGlow = (peak: number) =>
   Math.max(0, Math.min(1, (20 * Math.log10(Math.max(1e-6, peak)) + 42) / 36));
@@ -76,7 +77,10 @@ export function OrbitScene() {
     const stars = renderer === "webgl" ? createGalaxies(specs) : null;
     if (stars) {
       try {
-        gl = createGalaxyRenderer(node, stars);
+        gl = createGalaxyRenderer(node, stars, [
+          specs[0].radius,
+          specs[1].radius,
+        ]);
       } catch {
         gl = null;
       }
@@ -91,6 +95,7 @@ export function OrbitScene() {
     }
     figure.current?.setAttribute("data-renderer", renderer);
     const orbit = new BinaryOrbit();
+    const melody = new MelodyTracker();
     // The resting still for reduced motion: calm spirals at the starting phase.
     const still = stars ? new Float32Array(stars.world) : null;
     const stillA = [...orbit.coreA] as typeof orbit.coreA,
@@ -197,16 +202,21 @@ export function OrbitScene() {
           (1 - Math.exp(-dt / 0.6));
       }
       if (stars) {
+        // Note by note: ripples, held-note light, contour and leaps.
+        const kick = reduced
+          ? 0
+          : melody.update(score, engine.getTick(), playing, dt);
         const music: MusicState = {
           playing,
           closeness,
           energy: glowWave,
           rest: targets.rest,
-          // Each core rises a little with its voice's register.
-          liftA: (0.5 - targets.a.y) / 0.24,
-          liftB: (0.5 - targets.b.y) / 0.24,
+          // Each core rises and sinks with its own melodic line.
+          liftA: melody.lift[0],
+          liftB: melody.lift[1],
         };
         if (!reduced) {
+          if (kick) orbit.kick(kick);
           orbit.step(dt, music);
           // Stars move slowly, so the simulation runs at 30 Hz; frames in between only
           // carry each galaxy along with its core.
@@ -246,6 +256,7 @@ export function OrbitScene() {
                 ? "In resonance"
                 : "In orbit";
       }
+      figure.current?.setAttribute("data-onsets", String(melody.onsets));
       figure.current?.setAttribute(
         "data-separation",
         (stars ? orbit.distance : targets.separation).toFixed(2),
@@ -265,6 +276,13 @@ export function OrbitScene() {
           reduced
             ? { glowA: 0, glowB: 0, energy: 0 }
             : { glowA, glowB, energy: glowWave },
+          reduced
+            ? undefined
+            : {
+                ripples: melody.recentRipples(),
+                lights: melody.lights,
+                bridge: melody.bridge,
+              },
         );
       } else
         legacy!.draw(
