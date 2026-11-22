@@ -1,5 +1,15 @@
 # STUDIO release notes
 
+## Version 1.8 — A binary pair
+
+- **Orbit is now a binary galaxy system.** Two galaxy cores orbit their common centre of mass (masses 1 and 0.62). The music sets their separation: it shrinks with how long the duet has been playing (about half a minute to build, ten seconds to unwind), with loudness, and with how close the two voices are in pitch. A loud unison draws them in at once. Orbital speed follows Kepler's third law, so a close pair swings round faster. The cores never come closer than 1.35 radii of the larger galaxy, so the disks overlap at their edges as in photographs of real pairs.
+- **Stars respond to the companion's tide.** Each galaxy is made of stars that orbit in its own potential (a nearly solid-body disk plus a compact bulge). Each star feels the other galaxy only as a tide, the difference between the companion's pull on the star and on its core. Close passes therefore draw out bridges and tails by themselves: after a minute and a half of intense music, about a fifth of each disk lies beyond 1.3 radii, while both nuclei stay whole. Stars ease back toward a calm, rigidly turning spiral, slowly while music plays and within seconds at rest, so the arms never wind up and the pair heals between takes.
+- **Look.** The galaxies are rendered with WebGL2 as additive star sprites in a half-float buffer, with dust lanes that absorb blue light first and a tone-mapped, bloomed composite. Populations: golden bulge stars, soft disk light, blue young stars on feathered arms, bright clusters in small groups, pink star-forming knots, gold/violet-brown/blue diffuse light, and continuous dust lanes. The camera leans in as the pair closes; wide strips see the orbit closer to edge-on.
+- **Performance.** The simulation runs at 30 Hz, and healing visits a quarter of the stars per step. On a 2-core test machine, one step for 44,860 stars took about 4 ms. Machines with four or fewer cores use 60% of the stars.
+- **Fallback.** Without WebGL2 float render targets, the earlier painted 2D galaxies are used, on a fresh canvas.
+- Tests: `src/visual/binary.test.ts` (centre of mass, Kepler's law, approach and return, prograde disks, stable disks at rest, tails and intact nuclei after a close pass, healing). `e2e/orbit.spec.ts` checks the pair drawing together during playback and parting after Stop (WebGL), and the 2D fallback. The reduced-motion test now compares the artwork inside the frame, because the frame's anti-aliased corners vary slightly over a WebGL layer.
+
+
 ## Version 1.7.2 — Playhead fix
 
 - The playhead marker no longer draws over the "TRACKS" label when the arrangement is scrolled sideways (for example after double-clicking a clip further right). The ruler row created its own stacking layer, which trapped the sticky label below the playhead; it no longer does. Regression test in `e2e/layout.spec.ts` (44 browser tests).

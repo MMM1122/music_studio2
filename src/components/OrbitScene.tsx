@@ -4,26 +4,40 @@ import { engine } from "../audio/engine";
 import type { ReferenceMode } from "../audio/scheduler";
 import type { Project } from "../domain/models";
 import { useProjectStore } from "../stores/projectStore";
+import { chooseVoices, orbitTargets, type OrbitScore } from "../visual/orbit";
 import {
-  chooseVoices,
-  orbitTargets,
-  springStep,
-  type OrbitScore,
-} from "../visual/orbit";
+  BinaryOrbit,
+  HEAL_PLAYING,
+  HEAL_RESTING,
+  createGalaxies,
+  duetSpecs,
+  placeStars,
+  stepGalaxies,
+  zoomFor,
+  type MusicState,
+} from "../visual/binary";
 import {
-  paintSky,
-  paintGalaxy,
-  paintTidalBridge,
-  drawGalaxy,
-} from "../visual/orbitArtwork";
+  createGalaxyRenderer,
+  frameView,
+  supportsGalaxyGL,
+  type GalaxyRenderer,
+} from "../visual/galaxyGL";
+import { createLegacyRenderer } from "../visual/orbitLegacy";
 
 const toGlow = (peak: number) =>
   Math.max(0, Math.min(1, (20 * Math.log10(Math.max(1e-6, peak)) + 42) / 36));
 const ease = (current: number, next: number, dt: number) =>
   current + (next - current) * (1 - Math.exp(-dt * (next > current ? 12 : 3)));
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+/** Separation range of `orbitTargets`, used to read how close the voices are in pitch. */
+const NEAR = 0.13,
+  FAR = 0.56;
 
-/** Two original spiral galaxies follow the outer melodic voices. Cached dust/stellar layers
- * keep the rendering independent of React and of the audio scheduling thread. */
+type Renderer = "webgl" | "canvas";
+
+/** A binary pair of galaxies following the duet's two outer voices. With WebGL2, tens of
+ * thousands of simulated stars orbit, are drawn out by each other's tide as the music pulls
+ * the pair together, and heal at rest; otherwise two painted spirals drift with the voices. */
 export function OrbitScene() {
   const figure = useRef<HTMLElement>(null),
     canvas = useRef<HTMLCanvasElement>(null);
@@ -32,6 +46,9 @@ export function OrbitScene() {
     status = useRef<HTMLSpanElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
+  const [renderer, setRenderer] = useState<Renderer>(() =>
+    supportsGalaxyGL() ? "webgl" : "canvas",
+  );
   useEffect(() => {
     const changed = () =>
       setFullscreen(document.fullscreenElement === figure.current);
@@ -49,9 +66,40 @@ export function OrbitScene() {
     }
   }
   useEffect(() => {
-    const node = canvas.current!,
-      ctx = node.getContext("2d");
-    if (!ctx) return;
+    const node = canvas.current!;
+    // Fewer stars on modest machines; the look holds from about 60% of the full count.
+    const specs = duetSpecs(
+      (navigator.hardwareConcurrency ?? 8) <= 4 ? 0.6 : 1,
+    );
+    let gl: GalaxyRenderer | null = null,
+      legacy: ReturnType<typeof createLegacyRenderer> = null;
+    const stars = renderer === "webgl" ? createGalaxies(specs) : null;
+    if (stars) {
+      try {
+        gl = createGalaxyRenderer(node, stars);
+      } catch {
+        gl = null;
+      }
+      if (!gl) {
+        // The canvas now belongs to WebGL; a fresh one takes the 2D fallback.
+        setRenderer("canvas");
+        return;
+      }
+    } else {
+      legacy = createLegacyRenderer(node);
+      if (!legacy) return;
+    }
+    figure.current?.setAttribute("data-renderer", renderer);
+    const orbit = new BinaryOrbit();
+    // The resting still for reduced motion: calm spirals at the starting phase.
+    const still = stars ? new Float32Array(stars.world) : null;
+    const stillA = [...orbit.coreA] as typeof orbit.coreA,
+      stillB = [...orbit.coreB] as typeof orbit.coreB;
+    if (stars) {
+      stepGalaxies(stars, specs, orbit, 0, 0, 0);
+      still!.set(stars.world);
+    }
+
     const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = motionPreference.matches,
       needsDraw = true;
@@ -60,28 +108,24 @@ export function OrbitScene() {
       needsDraw = true;
     };
     motionPreference.addEventListener("change", onMotionChange);
-    const galaxyA = paintGalaxy(7),
-      galaxyB = paintGalaxy(23, true),
-      bridge = paintTidalBridge();
     const wave = new Float32Array(1024),
       spectrum = new Uint8Array(512);
     let width = 0,
       height = 0,
-      dpr = 1,
-      sky: HTMLCanvasElement | null = null;
+      dpr = 1;
     let score: OrbitScore = { voices: [], closest: 0, widest: 12 },
       scored: Project | null = null,
       scoredMode: ReferenceMode | null = null;
-    const start = orbitTargets(score, 0, false);
-    const a = { x: start.a.x, y: start.a.y, vx: 0, vy: 0 },
-      b = { x: start.b.x, y: start.b.y, vx: 0, vy: 0 };
     let glowA = 0,
       glowB = 0,
       glowWave = 0,
+      closeness = 0,
       frame = 0,
       last = 0,
       lastDraw = 0,
       elapsed = 0,
+      simulated = 0,
+      pending = 0,
       visible = true,
       caption = "";
 
@@ -96,7 +140,6 @@ export function OrbitScene() {
       dpr = ratio;
       node.width = Math.round(width * dpr);
       node.height = Math.round(height * dpr);
-      sky = paintSky(width, height, dpr);
       needsDraw = true;
     }
 
@@ -128,46 +171,7 @@ export function OrbitScene() {
       }
       const playing = engine.isPlaying(),
         targets = orbitTargets(score, engine.getTick(), playing);
-      const state =
-        !playing || targets.rest > 0.8
-          ? "rest"
-          : targets.separation < 0.24
-            ? "resonance"
-            : "orbit";
-      if (state !== caption) {
-        caption = state;
-        figure.current?.setAttribute("data-state", state);
-        if (status.current)
-          status.current.textContent =
-            state === "rest"
-              ? "At rest"
-              : state === "resonance"
-                ? "In resonance"
-                : "In orbit";
-      }
-      figure.current?.setAttribute(
-        "data-separation",
-        targets.separation.toFixed(2),
-      );
-      // With reduced motion, the cached still is redrawn only for resize/preference changes.
-      if (reduced && !needsDraw) return;
-      if (!reduced) elapsed += dt;
-      const seconds = reduced ? 0 : elapsed;
-      const position = reduced ? start : targets;
-      const drift = reduced ? 0 : 1;
-      const tx = position.a.x + drift * 0.01 * Math.sin(seconds * 0.18),
-        ty = position.a.y;
-      const ux = position.b.x + drift * 0.01 * Math.sin(seconds * 0.16 + 2),
-        uy = position.b.y;
-      if (reduced) {
-        Object.assign(a, { x: tx, y: ty, vx: 0, vy: 0 });
-        Object.assign(b, { x: ux, y: uy, vx: 0, vy: 0 });
-        glowA = glowB = glowWave = 0;
-      } else {
-        [a.x, a.vx] = springStep(a.x, a.vx, tx, dt);
-        [a.y, a.vy] = springStep(a.y, a.vy, ty, dt);
-        [b.x, b.vx] = springStep(b.x, b.vx, ux, dt);
-        [b.y, b.vy] = springStep(b.y, b.vy, uy, dt);
+      if (!reduced) {
         engine.readAnalysis(wave, spectrum);
         let sum = 0;
         for (const v of wave) sum += v * v;
@@ -187,81 +191,91 @@ export function OrbitScene() {
           toGlow(Math.sqrt(sum / wave.length) * 1.4),
           dt,
         );
+        // How close the two voices are in pitch, read through the existing interval model.
+        closeness +=
+          (clamp01((FAR - targets.separation) / (FAR - NEAR)) - closeness) *
+          (1 - Math.exp(-dt / 0.6));
       }
-      if (!needsDraw && time - lastDraw < (playing ? 16 : 40)) return;
-      if (!sky) return;
+      if (stars) {
+        const music: MusicState = {
+          playing,
+          closeness,
+          energy: glowWave,
+          rest: targets.rest,
+          // Each core rises a little with its voice's register.
+          liftA: (0.5 - targets.a.y) / 0.24,
+          liftB: (0.5 - targets.b.y) / 0.24,
+        };
+        if (!reduced) {
+          orbit.step(dt, music);
+          // Stars move slowly, so the simulation runs at 30 Hz; frames in between only
+          // carry each galaxy along with its core.
+          pending += dt;
+          if (pending >= 1 / 32) {
+            simulated += pending;
+            stepGalaxies(
+              stars,
+              specs,
+              orbit,
+              simulated,
+              pending,
+              HEAL_PLAYING + (HEAL_RESTING - HEAL_PLAYING) * orbit.calm,
+            );
+            pending = 0;
+          } else placeStars(stars, orbit);
+        }
+      }
+      const state =
+        !playing || targets.rest > 0.8
+          ? "rest"
+          : stars
+            ? orbit.distance < 1.35
+              ? "resonance"
+              : "orbit"
+            : targets.separation < 0.24
+              ? "resonance"
+              : "orbit";
+      if (state !== caption) {
+        caption = state;
+        figure.current?.setAttribute("data-state", state);
+        if (status.current)
+          status.current.textContent =
+            state === "rest"
+              ? "At rest"
+              : state === "resonance"
+                ? "In resonance"
+                : "In orbit";
+      }
+      figure.current?.setAttribute(
+        "data-separation",
+        (stars ? orbit.distance : targets.separation).toFixed(2),
+      );
+      // With reduced motion, the still is redrawn only for resize/preference changes.
+      if (reduced && !needsDraw) return;
+      if (!reduced) elapsed += dt;
+      if (!needsDraw && time - lastDraw < (playing ? 16 : 33)) return;
       lastDraw = time;
       needsDraw = false;
-      const padding = Math.min(64, height * 0.19),
-        field = height - padding * 2;
-      const radiusA = Math.min(field * 1.15, width * 0.245),
-        radiusB = radiusA * 0.76;
-      const ax = a.x * width,
-        bx = b.x * width;
-      // The centers may approach while the transparent arms overlap, like tidal interaction.
-      const ay = height * 0.53 + (a.y - 0.5) * field * 0.32;
-      const by = height * 0.45 + (b.y - 0.5) * field * 0.32;
-      const distance = Math.hypot(bx - ax, by - ay),
-        angle = Math.atan2(by - ay, bx - ax);
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx!.globalCompositeOperation = "source-over";
-      ctx!.globalAlpha = 1;
-      ctx!.drawImage(sky, 0, 0, width, height);
-      ctx!.save();
-      ctx!.translate(ax, ay);
-      ctx!.rotate(angle);
-      ctx!.globalAlpha = 0.65 + glowWave * 0.35;
-      const bridgeHeight = Math.min(field * 0.5, distance * 0.22);
-      ctx!.drawImage(bridge, 0, -bridgeHeight / 2, distance, bridgeHeight);
-      ctx!.restore();
-      drawGalaxy(
-        ctx!,
-        galaxyA,
-        ax,
-        ay,
-        radiusA,
-        0.51,
-        -0.19,
-        0.9 + seconds * 0.018,
-        glowA,
-      );
-      drawGalaxy(
-        ctx!,
-        galaxyB,
-        bx,
-        by,
-        radiusB,
-        0.65,
-        -0.42,
-        -0.6 - seconds * 0.024,
-        glowB,
-      );
-      // Music is a fine ripple inside the tidal stream, not a line across the whole sky.
-      if (glowWave > 0.01 && !reduced) {
-        ctx!.save();
-        ctx!.translate(ax, ay);
-        ctx!.rotate(angle);
-        const color = ctx!.createLinearGradient(0, 0, distance, 0);
-        color.addColorStop(0, "rgba(239,208,167,0)");
-        color.addColorStop(0.3, "rgba(173,212,246,0.4)");
-        color.addColorStop(0.7, "rgba(173,212,246,0.4)");
-        color.addColorStop(1, "rgba(239,208,167,0)");
-        ctx!.strokeStyle = color;
-        ctx!.lineWidth = 0.6;
-        ctx!.globalAlpha = glowWave * 0.6;
-        ctx!.beginPath();
-        for (let i = 0; i < 100; i++) {
-          const u = i / 99,
-            y =
-              (Math.sin(u * Math.PI * 2) * field * 0.07 +
-                wave[i * 8] * field * 0.11) *
-              Math.sin(u * Math.PI);
-          if (i) ctx!.lineTo(u * distance, y);
-          else ctx!.moveTo(0, y);
-        }
-        ctx!.stroke();
-        ctx!.restore();
-      }
+      if (gl) {
+        gl.draw(
+          frameView(width, height, dpr, reduced ? 1 : zoomFor(orbit.distance)),
+          reduced ? still! : stars!.world,
+          reduced ? stillA : orbit.coreA,
+          reduced ? stillB : orbit.coreB,
+          reduced
+            ? { glowA: 0, glowB: 0, energy: 0 }
+            : { glowA, glowB, energy: glowWave },
+        );
+      } else
+        legacy!.draw(
+          { targets, glowA, glowB, glowWave, wave },
+          dt,
+          elapsed,
+          reduced,
+          width,
+          height,
+          dpr,
+        );
     }
     measure();
     const resize = new ResizeObserver(measure);
@@ -270,14 +284,21 @@ export function OrbitScene() {
       visible = entries[0]?.isIntersecting ?? true;
     });
     observer.observe(node);
+    const lost = (event: Event) => {
+      event.preventDefault();
+      cancelAnimationFrame(frame);
+    };
+    node.addEventListener("webglcontextlost", lost);
     frame = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(frame);
       resize.disconnect();
       observer.disconnect();
+      node.removeEventListener("webglcontextlost", lost);
       motionPreference.removeEventListener("change", onMotionChange);
+      gl?.dispose();
     };
-  }, []);
+  }, [renderer]);
   return (
     <figure
       ref={figure}
@@ -308,9 +329,10 @@ export function OrbitScene() {
         </div>
       </div>
       <canvas
+        key={renderer}
         ref={canvas}
         role="img"
-        aria-label="Two intertwined spiral galaxies with warm luminous cores, blue stellar arms and a tidal bridge. Each follows a melodic voice: pitch shapes their positions, intervals their separation, and loudness their light."
+        aria-label="A binary pair of spiral galaxies with warm cores, dusty violet disks and blue, clumpy arms. They orbit each other and draw closer as the music builds and the two voices move nearer in pitch; close passes pull out tidal bridges and tails, which settle again when the music rests."
       />
       {fullscreenError && (
         <span className="orbit-error" role="status">

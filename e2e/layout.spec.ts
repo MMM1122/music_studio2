@@ -252,19 +252,28 @@ test("reduced motion keeps the orbit still during audio and responds to preferen
       page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
     )
     .toBe(true);
-  // Compare just the artwork, so an accessible playback caption may still change.
-  const still = await canvas.screenshot();
+  // Compare just the artwork: inside the rounded frame (whose anti-aliased corners the
+  // compositor may blend slightly differently from frame to frame over a WebGL layer) and
+  // clear of the captions, which may still change during playback.
+  const artwork = async () => {
+    const box = (await canvas.boundingBox())!;
+    return page.screenshot({
+      clip: {
+        x: box.x + 12,
+        y: box.y + 40,
+        width: box.width - 24,
+        height: box.height - 80,
+      },
+    });
+  };
+  const still = await artwork();
   await page.waitForTimeout(400);
-  expect((await canvas.screenshot()).equals(still)).toBe(true);
+  expect((await artwork()).equals(still)).toBe(true);
 
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await expect
-    .poll(async () => (await canvas.screenshot()).equals(still))
-    .toBe(false);
+  await expect.poll(async () => (await artwork()).equals(still)).toBe(false);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect
-    .poll(async () => (await canvas.screenshot()).equals(still))
-    .toBe(true);
+  await expect.poll(async () => (await artwork()).equals(still)).toBe(true);
   await expect
     .poll(() =>
       page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
