@@ -33,6 +33,14 @@ test("the binary pair draws together while the music plays and parts when it sto
     .poll(() => separation(page), { timeout: 40_000, intervals: [500] })
     .toBeLessThan(resting - 0.3);
   await expect(scene).not.toHaveAttribute("data-state", "rest");
+  // Every note of the two voices is seen as it starts.
+  const onsets = Number(await scene.getAttribute("data-onsets"));
+  expect(onsets).toBeGreaterThan(4);
+  await expect
+    .poll(async () => Number(await scene.getAttribute("data-onsets")), {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(onsets + 3);
   await page.keyboard.press("Space");
   await expect
     .poll(() => separation(page), { timeout: 30_000, intervals: [500] })

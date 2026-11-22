@@ -859,7 +859,7 @@ export function App() {
               <CircleHelp />
               <span>A little guidance</span>
             </button>
-            <div className="version-label">STUDIO / V.1.8</div>
+            <div className="version-label">STUDIO / V.1.9</div>
           </div>
         </nav>
         {workspace === "math" ? (

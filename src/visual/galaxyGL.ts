@@ -6,6 +6,16 @@
  */
 import { random } from "./orbitArtwork";
 import type { Galaxies, Vec3 } from "./binary";
+import { MAX_RIPPLES, RIPPLE_SPEED, type Light, type Ripple } from "./melody";
+
+/** What the melody is doing this frame (see MelodyTracker). */
+export interface MelodyLight {
+  ripples: Ripple[];
+  lights: Light[];
+  bridge: number;
+}
+export const NO_MELODY: MelodyLight = { ripples: [], lights: [], bridge: 0 };
+const MAX_LIGHTS = 4;
 
 export interface GalaxyView {
   /** CSS pixels. */
@@ -35,6 +45,7 @@ export interface GalaxyRenderer {
     coreA: Vec3,
     coreB: Vec3,
     light: FrameLight,
+    melody?: MelodyLight,
   ): void;
   dispose(): void;
 }
@@ -45,6 +56,8 @@ in vec4 aColor;
 in float aSize;
 in float aKind;
 in float aHost;
+/** Calm radius within its own galaxy, in that galaxy's radii (0 for the cores). */
+in float aHome;
 uniform mat3 uView;
 uniform vec2 uCenter;
 uniform float uScale;
@@ -53,6 +66,13 @@ uniform float uDpr;
 uniform vec2 uGlow;
 uniform float uEnergy;
 uniform float uDust;
+// Melody: ripples (host, age, strength, hue), held-note lights (host, radius, strength, hue),
+// and the bridge flash between the two cores (world space).
+uniform vec4 uRipples[${MAX_RIPPLES}];
+uniform vec4 uLights[${MAX_LIGHTS}];
+uniform float uBridge;
+uniform vec3 uCoreA;
+uniform vec3 uCoreB;
 out vec3 vColor;
 flat out float vKind;
 void main() {
@@ -74,7 +94,47 @@ void main() {
   float glow = aHost < 0.5 ? uGlow.x : uGlow.y;
   float lift = aKind < 0.5 ? 0.12 : aKind < 1.5 ? 0.9 : 0.35;
   float intensity = aColor.a * keep * (1.0 + glow * lift + uEnergy * 0.25);
-  vColor = dust ? aColor.rgb * aColor.a : aColor.rgb * intensity;
+  if (dust) {
+    vColor = aColor.rgb * aColor.a;
+  } else {
+    float boost = 0.0, hue = 0.0;
+    for (int k = 0; k < ${MAX_RIPPLES}; k++) {
+      vec4 r = uRipples[k];
+      if (r.z <= 0.0 || abs(r.x - aHost) > 0.5) continue;
+      float d = (aHome - r.y * ${RIPPLE_SPEED.toFixed(3)}) / 0.15;
+      float b = r.z * 1.3 * exp(-d * d) * exp(-r.y * 1.2);
+      boost += b;
+      hue += r.w * b;
+    }
+    for (int k = 0; k < ${MAX_LIGHTS}; k++) {
+      vec4 l = uLights[k];
+      if (l.z <= 0.0 || abs(l.x - aHost) > 0.5) continue;
+      float d = (aHome - l.y) / 0.11;
+      float b = l.z * 1.2 * exp(-d * d);
+      boost += b;
+      hue += l.w * b;
+    }
+    if (uBridge > 0.0) {
+      vec3 ab = uCoreB - uCoreA;
+      float t = clamp(dot(aPos - uCoreA, ab) / dot(ab, ab), 0.0, 1.0);
+      vec3 off = aPos - (uCoreA + ab * t);
+      float b = uBridge * exp(-dot(off, off) / 0.12) *
+        smoothstep(0.05, 0.3, t) * smoothstep(0.95, 0.7, t) * 2.0;
+      boost += b;
+      hue += 0.5 * b;
+    }
+    // Several waves can overlap; cap their sum so the arms never wash out to white.
+    float raw = boost;
+    boost = 1.6 * (1.0 - exp(-raw / 1.6));
+    hue *= raw > 0.0 ? boost / raw : 0.0;
+    // Low notes warm the light toward gold, high notes cool it toward ice blue.
+    vec3 tint = mix(vec3(1.0, 0.6, 0.24), vec3(0.4, 0.7, 1.0), boost > 0.0 ? hue / boost : 0.5);
+    vec3 base = aColor.rgb;
+    vec3 lit = mix(base, tint * max(max(base.r, base.g), base.b), min(1.0, boost * 0.6));
+    // Brighten what is there, and add a little light of the note's colour of its own, so
+    // even the faint disk between the arms catches the wave.
+    vColor = lit * intensity * (1.0 + boost * 2.4) + tint * boost * 0.1 * keep;
+  }
   vKind = aKind;
 }`;
 
@@ -262,6 +322,8 @@ export function supportsGalaxyGL() {
 export function createGalaxyRenderer(
   canvas: HTMLCanvasElement,
   stars: Galaxies,
+  /** Radius of each galaxy, to place every star on its own disk for melody light. */
+  radii: [number, number] = [1, 1],
 ): GalaxyRenderer | null {
   const gl = canvas.getContext("webgl2", {
     antialias: false,
@@ -291,6 +353,11 @@ export function createGalaxyRenderer(
       names.map((name) => [name, gl.getUniformLocation(program, name)]),
     );
   const pu = uniforms(points, [
+    "uRipples",
+    "uLights",
+    "uBridge",
+    "uCoreA",
+    "uCoreB",
     "uView",
     "uCenter",
     "uScale",
@@ -312,12 +379,14 @@ export function createGalaxyRenderer(
   const colors = new Float32Array(total * 4),
     sizes = new Float32Array(total),
     kinds = new Float32Array(total),
-    hosts = new Float32Array(total);
+    hosts = new Float32Array(total),
+    homes = new Float32Array(total);
   colors.set(stars.color);
   sizes.set(stars.size);
   for (let i = 0; i < stars.count; i++) {
     kinds[i] = stars.kind[i];
     hosts[i] = stars.host[i];
+    homes[i] = stars.home[i * 3] / radii[stars.host[i]];
   }
   for (const [k, host, radius] of [
     [stars.count, 0, 0.16],
@@ -354,6 +423,7 @@ export function createGalaxyRenderer(
     buffer(sizes, "aSize", 1, points),
     buffer(kinds, "aKind", 1, points),
     buffer(hosts, "aHost", 1, points),
+    buffer(homes, "aHome", 1, points),
   ];
   const skyStars = skyData();
   const skyVao = gl.createVertexArray()!;
@@ -430,7 +500,7 @@ export function createGalaxyRenderer(
   };
 
   return {
-    draw(view, world, coreA, coreB, light) {
+    draw(view, world, coreA, coreB, light, melody = NO_MELODY) {
       const width = canvas.width,
         height = canvas.height;
       ensureTargets(width, height);
@@ -459,6 +529,23 @@ export function createGalaxyRenderer(
       gl.uniform1f(pu.uDpr, view.dpr);
       gl.uniform2f(pu.uGlow, light.glowA, light.glowB);
       gl.uniform1f(pu.uEnergy, light.energy);
+      const ripples = new Float32Array(MAX_RIPPLES * 4);
+      melody.ripples
+        .slice(-MAX_RIPPLES)
+        .forEach((r, k) =>
+          ripples.set([r.host, r.age, r.strength, r.hue], k * 4),
+        );
+      const lights = new Float32Array(MAX_LIGHTS * 4);
+      melody.lights
+        .slice(0, MAX_LIGHTS)
+        .forEach((l, k) =>
+          lights.set([l.host, l.radius, l.strength, l.hue], k * 4),
+        );
+      gl.uniform4fv(pu.uRipples, ripples);
+      gl.uniform4fv(pu.uLights, lights);
+      gl.uniform1f(pu.uBridge, melody.bridge);
+      gl.uniform3fv(pu.uCoreA, coreA);
+      gl.uniform3fv(pu.uCoreB, coreB);
       gl.uniform1f(pu.uDust, 0);
       gl.bindVertexArray(pointsVao);
       gl.drawArrays(gl.POINTS, 0, total);
