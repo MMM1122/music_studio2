@@ -303,3 +303,43 @@ test("orbit captions fit at narrow widths and after resizing", async ({
     expect(upper!.x + upper!.width).toBeLessThan(lower!.x);
   }
 });
+
+test("the galaxy orbit expands and returns to the studio without interrupting audio", async ({
+  page,
+}) => {
+  await open(page, 1440, 900);
+  const canvas = page.locator(".orbit-scene canvas");
+  const original = (await canvas.boundingBox())!;
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
+    )
+    .toBe(true);
+  await page.getByRole("button", { name: "Expand orbit", exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => document.fullscreenElement?.className))
+    .toBe("orbit-scene");
+  await expect.poll(async () => (await canvas.boundingBox())!.height).toBe(900);
+  await expect(
+    page.getByRole("button", { name: "Exit expanded orbit" }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
+    )
+    .toBe(true);
+  await page.getByRole("button", { name: "Exit expanded orbit" }).click();
+  await expect
+    .poll(() => page.evaluate(() => document.fullscreenElement))
+    .toBeNull();
+  await expect
+    .poll(async () => (await canvas.boundingBox())!.height)
+    .toBe(original.height);
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__studioTest.getAudioState().playing),
+    )
+    .toBe(true);
+  await page.keyboard.press("Space");
+});

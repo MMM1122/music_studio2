@@ -10,17 +10,17 @@ The public website is deployed from this repository. Existing saved sessions sta
 
 A working browser music studio for composing original R&B, neo-soul, electronic music, and beats. Built with React, strict TypeScript, Tone.js, and Web Audio. No account, paid samples, or AI credentials are needed.
 
-![STUDIO in Gallery Light with the refined Twin resonance orbit](docs/screenshots/studio-orbit-light.png)
+![STUDIO in Gallery Light with the galaxy-inspired Twin resonance orbit](docs/screenshots/studio-galaxy-light.png)
 
 ## Twin resonance
 
 Try it on the **[live STUDIO website](https://music-studio2.vercel.app/)**. On shorter windows, choose **Show orbit** above the arrangement to reveal the scene.
 
-**Show orbit** opens a miniature observatory above the arrangement. An ice-blue planet and a warm, ringed companion follow the two main audible melodic tracks: their pitch contours move the planets, the interval changes their distance, and each voice's level lights its atmosphere. Fine filaments carry the actual output waveform. The colored captions identify the tracks being followed.
+**Show orbit** opens a miniature observatory above the arrangement. Two intertwined spiral galaxies follow the two main audible melodic tracks. Warm golden nuclei, icy blue stellar arms, irregular dust lanes and a shared tidal stream take their visual cues from interacting-galaxy imagery. Pitch contours move the cores, the interval changes their distance, and each voice's level lights its nucleus. The actual output waveform ripples through the tidal bridge. The colored captions identify the tracks being followed.
 
-The scene opens by default on tall windows and remembers **Hide orbit**. Its wider frame works in both themes, with the piano roll kept on screen. System **Reduce motion** makes the artwork still while audio continues; changes to that preference take effect immediately. Planet textures and the star field are cached when the scene resizes.
+The scene opens by default on tall windows and remembers **Hide orbit**. Its compact frame works in both themes, with the piano roll kept on screen. Choose **Expand orbit** in a fullscreen-capable browser to explore the star fields; **Esc** or the minimize button returns to the studio without interrupting playback. System **Reduce motion** makes the artwork still while audio continues; changes to that preference take effect immediately. The original procedural galaxy textures are cached once per scene, and the background star field only redraws on resize. This is a musical visualization, not a physical galaxy simulation.
 
-![Refined Twin resonance orbit](docs/screenshots/orbit-refined.png)
+![Twin resonance with interacting spiral galaxies](docs/screenshots/orbit-galaxies.png)
 
 ## Mathematical Music Lab
 
